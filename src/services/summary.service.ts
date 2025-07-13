@@ -8,6 +8,11 @@ class SummaryService {
   private outputParser: StringOutputParser;
 
   constructor() {
+    console.log(
+      `[${new Date().toISOString()}] [SummaryService] Initializing with OpenAI API key: ${
+        env.OPENAI_API_KEY ? "SET" : "NOT SET"
+      }`
+    );
     this.llm = new ChatOpenAI({
       openAIApiKey: env.OPENAI_API_KEY,
       modelName: "o4-mini-2025-04-16",
@@ -24,12 +29,30 @@ class SummaryService {
     messages: Array<{ role: string; content: string; timestamp?: string }>,
     previousSummary?: string
   ): Promise<string> {
+    const methodName = "generateThreadSummary";
+    console.log(
+      `[${new Date().toISOString()}] [SummaryService.${methodName}] Starting with ${
+        messages.length
+      } messages, previous summary: ${
+        previousSummary ? "provided" : "not provided"
+      }`
+    );
+
     try {
       const prompt = this.createThreadSummaryPrompt();
+      console.log(
+        `[${new Date().toISOString()}] [SummaryService.${methodName}] Created thread summary prompt`
+      );
 
       const messagesText = messages
         .map((msg) => `${msg.role}: ${msg.content}`)
         .join("\n");
+
+      console.log(
+        `[${new Date().toISOString()}] [SummaryService.${methodName}] Messages text length: ${
+          messagesText.length
+        } characters`
+      );
 
       const input = {
         messages: messagesText,
@@ -38,12 +61,34 @@ class SummaryService {
         message_count: messages.length,
       };
 
+      console.log(
+        `[${new Date().toISOString()}] [SummaryService.${methodName}] Preparing to invoke LLM chain`
+      );
+      const startTime = Date.now();
+
       const chain = prompt.pipe(this.llm).pipe(this.outputParser);
       const summary = await chain.invoke(input);
 
-      return summary.trim();
+      const endTime = Date.now();
+      console.log(
+        `[${new Date().toISOString()}] [SummaryService.${methodName}] LLM invocation completed in ${
+          endTime - startTime
+        }ms`
+      );
+
+      const trimmedSummary = summary.trim();
+      console.log(
+        `[${new Date().toISOString()}] [SummaryService.${methodName}] Generated summary length: ${
+          trimmedSummary.length
+        } characters`
+      );
+
+      return trimmedSummary;
     } catch (error) {
-      console.error("Error generating thread summary:", error);
+      console.error(
+        `[${new Date().toISOString()}] [SummaryService.${methodName}] Error occurred:`,
+        error
+      );
       throw new Error("Failed to generate thread summary");
     }
   }
@@ -56,12 +101,30 @@ class SummaryService {
     threadSummary: string,
     previousContextSummary?: string
   ): Promise<string> {
+    const methodName = "updateUserContextSummary";
+    console.log(
+      `[${new Date().toISOString()}] [SummaryService.${methodName}] Starting with thread summary length: ${
+        threadSummary.length
+      }, previous context summary: ${
+        previousContextSummary ? "provided" : "not provided"
+      }`
+    );
+
     try {
       const prompt = this.createUserContextSummaryPrompt();
+      console.log(
+        `[${new Date().toISOString()}] [SummaryService.${methodName}] Created user context summary prompt`
+      );
 
       const contextText = Object.entries(currentContext)
         .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
         .join(", ");
+
+      console.log(
+        `[${new Date().toISOString()}] [SummaryService.${methodName}] Context text length: ${
+          contextText.length
+        } characters`
+      );
 
       const input = {
         current_context: contextText,
@@ -70,12 +133,34 @@ class SummaryService {
           previousContextSummary || "Nenhum contexto anterior disponível",
       };
 
+      console.log(
+        `[${new Date().toISOString()}] [SummaryService.${methodName}] Preparing to invoke LLM chain`
+      );
+      const startTime = Date.now();
+
       const chain = prompt.pipe(this.llm).pipe(this.outputParser);
       const summary = await chain.invoke(input);
 
-      return summary.trim();
+      const endTime = Date.now();
+      console.log(
+        `[${new Date().toISOString()}] [SummaryService.${methodName}] LLM invocation completed in ${
+          endTime - startTime
+        }ms`
+      );
+
+      const trimmedSummary = summary.trim();
+      console.log(
+        `[${new Date().toISOString()}] [SummaryService.${methodName}] Generated summary length: ${
+          trimmedSummary.length
+        } characters`
+      );
+
+      return trimmedSummary;
     } catch (error) {
-      console.error("Error updating user context summary:", error);
+      console.error(
+        `[${new Date().toISOString()}] [SummaryService.${methodName}] Error occurred:`,
+        error
+      );
       throw new Error("Failed to update user context summary");
     }
   }
@@ -88,8 +173,18 @@ class SummaryService {
     threadSummary: string,
     recentMessages: Array<{ role: string; content: string }>
   ): Promise<string> {
+    const methodName = "generateRecommendationContext";
+    console.log(
+      `[${new Date().toISOString()}] [SummaryService.${methodName}] Starting with thread summary length: ${
+        threadSummary.length
+      }, recent messages: ${recentMessages.length}`
+    );
+
     try {
       const prompt = this.createRecommendationContextPrompt();
+      console.log(
+        `[${new Date().toISOString()}] [SummaryService.${methodName}] Created recommendation context prompt`
+      );
 
       const contextText = Object.entries(userContext)
         .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
@@ -99,18 +194,46 @@ class SummaryService {
         .map((msg) => `${msg.role}: ${msg.content}`)
         .join("\n");
 
+      console.log(
+        `[${new Date().toISOString()}] [SummaryService.${methodName}] Context text length: ${
+          contextText.length
+        }, recent messages text length: ${recentMessagesText.length}`
+      );
+
       const input = {
         user_context: contextText,
         thread_summary: threadSummary,
         recent_messages: recentMessagesText,
       };
 
+      console.log(
+        `[${new Date().toISOString()}] [SummaryService.${methodName}] Preparing to invoke LLM chain`
+      );
+      const startTime = Date.now();
+
       const chain = prompt.pipe(this.llm).pipe(this.outputParser);
       const summary = await chain.invoke(input);
 
-      return summary.trim();
+      const endTime = Date.now();
+      console.log(
+        `[${new Date().toISOString()}] [SummaryService.${methodName}] LLM invocation completed in ${
+          endTime - startTime
+        }ms`
+      );
+
+      const trimmedSummary = summary.trim();
+      console.log(
+        `[${new Date().toISOString()}] [SummaryService.${methodName}] Generated summary length: ${
+          trimmedSummary.length
+        } characters`
+      );
+
+      return trimmedSummary;
     } catch (error) {
-      console.error("Error generating recommendation context:", error);
+      console.error(
+        `[${new Date().toISOString()}] [SummaryService.${methodName}] Error occurred:`,
+        error
+      );
       throw new Error("Failed to generate recommendation context");
     }
   }
@@ -119,6 +242,11 @@ class SummaryService {
    * Cria prompt para resumo de thread
    */
   private createThreadSummaryPrompt(): PromptTemplate {
+    const methodName = "createThreadSummaryPrompt";
+    console.log(
+      `[${new Date().toISOString()}] [SummaryService.${methodName}] Creating thread summary prompt template`
+    );
+
     const template = `
 # Você é um assistente hermenêutico-computacional: além de condensar fatos, usa lentes filosóficas (Fenomenologia, Hermenêutica, Psicanálise, Nietzsche/Foucault, Filosofia da Linguagem) para inferir motivações, desejos e tensões que o próprio interlocutor ainda não percebe. Sua tarefa é criar um resumo conciso e informativo da seguinte conversa.
 
@@ -166,6 +294,11 @@ RESUMO:`;
    * Cria prompt para resumo de contexto do usuário
    */
   private createUserContextSummaryPrompt(): PromptTemplate {
+    const methodName = "createUserContextSummaryPrompt";
+    console.log(
+      `[${new Date().toISOString()}] [SummaryService.${methodName}] Creating user context summary prompt template`
+    );
+
     const template = `
 Você é um assistente especializado em manter contexto de usuário. Sua tarefa é atualizar o contexto do usuário com base em novas informações.
 
@@ -195,6 +328,11 @@ CONTEXTO ATUALIZADO:`;
    * Cria prompt para contexto de recomendação
    */
   private createRecommendationContextPrompt(): PromptTemplate {
+    const methodName = "createRecommendationContextPrompt";
+    console.log(
+      `[${new Date().toISOString()}] [SummaryService.${methodName}] Creating recommendation context prompt template`
+    );
+
     const template = `
 Você é um assistente especializado em preparar contexto para recomendações de produtos. Sua tarefa é criar um resumo focado em recomendações.
 

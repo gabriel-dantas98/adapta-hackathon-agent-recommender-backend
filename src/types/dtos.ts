@@ -101,8 +101,15 @@ export const UserEnhancedContextResponseDto = z.object({
 
 // Recommendation DTOs
 export const RecommendationRequestDto = z.object({
-  user_id: z.string(),
-  session_id: z.string().optional(),
+  userEnhancedContext: z.object({
+    id: z.string(),
+    context_id: z.string(),
+    user_id: z.string(),
+    metadata: z.record(z.any()),
+    output_base_prompt: z.record(z.any()),
+    embeddings: z.array(z.number()).nullable(),
+  }),
+  threadSummary: z.string(),
   limit: z.number().min(1).max(50).default(10),
   similarity_threshold: z.number().min(0).max(1).default(0.7),
 });
@@ -121,7 +128,6 @@ export const RecommendationResponseDto = z.object({
 export const RecommendationListResponseDto = z.object({
   recommendations: z.array(RecommendationResponseDto),
   total: z.number(),
-  user_context_summary: z.string().optional(),
 });
 
 // Thread Summary DTOs

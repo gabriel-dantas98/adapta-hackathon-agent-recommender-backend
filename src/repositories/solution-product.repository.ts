@@ -20,13 +20,29 @@ export class SolutionProductRepository {
   async create(
     data: CreateSolutionProductInput
   ): Promise<SolutionProductResponse> {
+    const methodName = "create";
+    console.log(
+      `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Starting with data:`,
+      JSON.stringify(data, null, 2)
+    );
+
     try {
+      console.log(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Generating embeddings for product metadata`
+      );
+
       // Gera embeddings para o produto
       const embeddings = await embeddingsService.generateEmbeddingFromMetadata(
         data.metadata,
         data.title,
         data.description,
         data.categories
+      );
+
+      console.log(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Embeddings generated successfully, dimension: ${
+          embeddings.length
+        }`
       );
 
       const insertData: SolutionProductInsert = {
@@ -36,24 +52,56 @@ export class SolutionProductRepository {
         updated_at: new Date().toISOString(),
       };
 
+      console.log(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Preparing to insert:`,
+        JSON.stringify(
+          { ...insertData, embeddings: `[${embeddings.length} dimensions]` },
+          null,
+          2
+        )
+      );
+
       const { data: result, error } = await supabase
         .from(this.tableName)
         .insert(insertData)
         .select("*")
         .single();
-      console.log("result FROM DATABASE", result);
+
+      console.log(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Database result:`,
+        result
+      );
+
       if (error) {
+        console.error(
+          `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Database error:`,
+          error
+        );
         throw error;
       }
 
-      return this.formatResponse(result);
+      const formattedResponse = this.formatResponse(result);
+      console.log(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Successfully created solution product with ID:`,
+        result.id
+      );
+      return formattedResponse;
     } catch (error) {
+      console.error(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Error occurred:`,
+        error
+      );
       handleDatabaseError(error, "create solution product");
       throw error;
     }
   }
 
   async findById(id: string): Promise<SolutionProductResponse | null> {
+    const methodName = "findById";
+    console.log(
+      `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Starting with id:${id}`
+    );
+
     try {
       const { data, error } = await supabase
         .from(this.tableName)
@@ -63,13 +111,28 @@ export class SolutionProductRepository {
 
       if (error) {
         if (error.code === "PGRST116") {
+          console.log(
+            `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Solution product not found with id:${id}`
+          );
           return null;
         }
+        console.error(
+          `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Database error:`,
+          error
+        );
         throw error;
       }
 
+      console.log(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Found solution product:`,
+        data.title
+      );
       return this.formatResponse(data);
     } catch (error) {
+      console.error(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Error occurred:`,
+        error
+      );
       handleDatabaseError(error, "find solution product by id");
       throw error;
     }
@@ -78,6 +141,11 @@ export class SolutionProductRepository {
   async findByProductId(
     productId: string
   ): Promise<SolutionProductResponse | null> {
+    const methodName = "findByProductId";
+    console.log(
+      `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Starting with productId:${productId}`
+    );
+
     try {
       const { data, error } = await supabase
         .from(this.tableName)
@@ -87,13 +155,28 @@ export class SolutionProductRepository {
 
       if (error) {
         if (error.code === "PGRST116") {
+          console.log(
+            `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Solution product not found with productId:${productId}`
+          );
           return null;
         }
+        console.error(
+          `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Database error:`,
+          error
+        );
         throw error;
       }
 
+      console.log(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Found solution product:`,
+        data.title
+      );
       return this.formatResponse(data);
     } catch (error) {
+      console.error(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Error occurred:`,
+        error
+      );
       handleDatabaseError(error, "find solution product by product id");
       throw error;
     }
@@ -104,6 +187,11 @@ export class SolutionProductRepository {
     limit: number = 50,
     offset: number = 0
   ): Promise<SolutionProductResponse[]> {
+    const methodName = "findByOwnerId";
+    console.log(
+      `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Starting with ownerId:${ownerId}, limit:${limit}, offset:${offset}`
+    );
+
     try {
       const { data, error } = await supabase
         .from(this.tableName)
@@ -113,11 +201,24 @@ export class SolutionProductRepository {
         .range(offset, offset + limit - 1);
 
       if (error) {
+        console.error(
+          `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Database error:`,
+          error
+        );
         throw error;
       }
 
+      console.log(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Found ${
+          data.length
+        } solution products for owner ${ownerId}`
+      );
       return data.map((row) => this.formatResponse(row));
     } catch (error) {
+      console.error(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Error occurred:`,
+        error
+      );
       handleDatabaseError(error, "find solution products by owner id");
       throw error;
     }
@@ -127,6 +228,11 @@ export class SolutionProductRepository {
     limit: number = 50,
     offset: number = 0
   ): Promise<SolutionProductResponse[]> {
+    const methodName = "findAll";
+    console.log(
+      `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Starting with limit:${limit}, offset:${offset}`
+    );
+
     try {
       const { data, error } = await supabase
         .from(this.tableName)
@@ -135,11 +241,24 @@ export class SolutionProductRepository {
         .range(offset, offset + limit - 1);
 
       if (error) {
+        console.error(
+          `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Database error:`,
+          error
+        );
         throw error;
       }
 
+      console.log(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Found ${
+          data.length
+        } solution products`
+      );
       return data.map((row) => this.formatResponse(row));
     } catch (error) {
+      console.error(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Error occurred:`,
+        error
+      );
       handleDatabaseError(error, "find all solution products");
       throw error;
     }
@@ -149,13 +268,26 @@ export class SolutionProductRepository {
     id: string,
     data: UpdateSolutionProductInput
   ): Promise<SolutionProductResponse | null> {
+    const methodName = "update";
+    console.log(
+      `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Starting with id:${id}, data:`,
+      JSON.stringify(data, null, 2)
+    );
+
     try {
       let embeddings: number[] | undefined;
 
       // Regenera embeddings se metadata ou output_base_prompt foram alterados
       if (data.metadata || data.output_base_prompt) {
+        console.log(
+          `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Regenerating embeddings due to metadata/prompt changes`
+        );
+
         const current = await this.findById(id);
         if (!current) {
+          console.log(
+            `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Solution product not found for update with id:${id}`
+          );
           return null;
         }
 
@@ -167,6 +299,12 @@ export class SolutionProductRepository {
           current.description,
           current.categories
         );
+
+        console.log(
+          `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] New embeddings generated, dimension: ${
+            embeddings.length
+          }`
+        );
       }
 
       const updateData: SolutionProductUpdate = {
@@ -174,6 +312,20 @@ export class SolutionProductRepository {
         ...(embeddings && { embeddings }),
         updated_at: new Date().toISOString(),
       };
+
+      console.log(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Preparing to update:`,
+        JSON.stringify(
+          {
+            ...updateData,
+            embeddings: embeddings
+              ? `[${embeddings.length} dimensions]`
+              : undefined,
+          },
+          null,
+          2
+        )
+      );
 
       const { data: result, error } = await supabase
         .from(this.tableName)
@@ -184,19 +336,39 @@ export class SolutionProductRepository {
 
       if (error) {
         if (error.code === "PGRST116") {
+          console.log(
+            `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Solution product not found for update with id:${id}`
+          );
           return null;
         }
+        console.error(
+          `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Database error:`,
+          error
+        );
         throw error;
       }
 
+      console.log(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Successfully updated solution product with ID:`,
+        result.id
+      );
       return this.formatResponse(result);
     } catch (error) {
+      console.error(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Error occurred:`,
+        error
+      );
       handleDatabaseError(error, "update solution product");
       throw error;
     }
   }
 
   async delete(id: string): Promise<boolean> {
+    const methodName = "delete";
+    console.log(
+      `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Starting with id:${id}`
+    );
+
     try {
       const { error } = await supabase
         .from(this.tableName)
@@ -204,11 +376,22 @@ export class SolutionProductRepository {
         .eq("id", id);
 
       if (error) {
+        console.error(
+          `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Database error:`,
+          error
+        );
         throw error;
       }
 
+      console.log(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Successfully deleted solution product with ID:${id}`
+      );
       return true;
     } catch (error) {
+      console.error(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Error occurred:`,
+        error
+      );
       handleDatabaseError(error, "delete solution product");
       throw error;
     }
@@ -223,6 +406,13 @@ export class SolutionProductRepository {
       SolutionProductResponse & { similarity_score: number; owner_info?: any }
     >
   > {
+    const methodName = "searchByEmbedding";
+    console.log(
+      `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Starting with embedding dimension:${
+        embedding.length
+      }, threshold:${threshold}, limit:${limit}`
+    );
+
     try {
       const { data, error } = await supabase.rpc("match_solution_products", {
         query_embedding: embedding,
@@ -231,85 +421,88 @@ export class SolutionProductRepository {
       });
 
       if (error) {
+        console.error(
+          `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Database error:`,
+          error
+        );
         throw error;
       }
 
+      console.log(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Found ${
+          data.length
+        } solution products matching embedding criteria`
+      );
       return data.map((row: any) => ({
         ...this.formatResponse(row),
         similarity_score: row.similarity,
         owner_info: row.owner_info,
       }));
     } catch (error) {
+      console.error(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Error occurred:`,
+        error
+      );
       handleDatabaseError(error, "search solution products by embedding");
       throw error;
     }
   }
 
   async findWithOwnerInfo(
-    embedding: number[],
-    threshold: number = 0.7,
+    userEmbedding: number[],
+    threadEmbedding: number[],
+    userWeight: number = 0.75,
+    threadWeight: number = 0.25,
     limit: number = 10
   ): Promise<
     Array<
       SolutionProductResponse & { similarity_score: number; owner_info: any }
     >
   > {
+    const methodName = "findWithOwnerInfo";
+    console.log(
+      `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Starting with userEmbedding:${
+        userEmbedding.length
+      }d, threadEmbedding:${
+        threadEmbedding.length
+      }d, userWeight:${userWeight}, threadWeight:${threadWeight}, limit:${limit}`
+    );
+
     try {
-      const { data, error } = await supabase
-        .from(this.tableName)
-        .select(
-          `
-          *,
-          solutions_owner!inner (
-            company_name,
-            domain,
-            metadata as owner_metadata
-          )
-        `
-        )
-        .order("created_at", { ascending: false })
-        .limit(limit);
+      const { data, error } = await supabase.rpc(
+        "match_products_with_owner_info",
+        {
+          user_embedding: userEmbedding,
+          thread_embedding: threadEmbedding,
+          user_weight: userWeight,
+          thread_weight: threadWeight,
+          match_count: limit,
+        }
+      );
 
       if (error) {
+        console.error(
+          `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Database error:`,
+          error
+        );
         throw error;
       }
 
-      // Para cada produto, calcula similaridade com o embedding fornecido
-      const results = await Promise.all(
-        data.map(async (row: any) => {
-          const productEmbedding = row.embeddings;
-          if (!productEmbedding) {
-            return null;
-          }
-
-          const similarity = embeddingsService.calculateCosineSimilarity(
-            embedding,
-            productEmbedding
-          );
-
-          if (similarity < threshold) {
-            return null;
-          }
-
-          return {
-            ...this.formatResponse(row),
-            similarity_score: similarity,
-            owner_info: {
-              company_name: row.solutions_owner.company_name,
-              domain: row.solutions_owner.domain,
-              metadata: row.solutions_owner.owner_metadata,
-            },
-          };
-        })
+      console.log(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Found ${
+          data.length
+        } solution products with owner info`
       );
-
-      return results
-        .filter(Boolean)
-        .sort((a, b) => b!.similarity_score - a!.similarity_score)
-        .slice(0, limit) as Array<
-        SolutionProductResponse & { similarity_score: number; owner_info: any }
-      >;
+      return data.map((row: any) => ({
+        ...this.formatResponse(row),
+        similarity_score: row.similarity,
+        owner_info: row.owner_info,
+      }));
     } catch (error) {
+      console.error(
+        `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Error occurred:`,
+        error
+      );
       handleDatabaseError(error, "find solution products with owner info");
       throw error;
     }
@@ -320,12 +513,11 @@ export class SolutionProductRepository {
       id: row.id,
       product_id: row.product_id,
       owner_id: row.owner_id,
-      metadata: row.metadata,
       title: row.title,
-      categories: row.categories,
       description: row.description,
-      url: row.url,
-      image_url: row.image_url,
+      categories: row.categories,
+      metadata: row.metadata,
+      output_base_prompt: row.output_base_prompt,
       created_at: row.created_at,
       updated_at: row.updated_at,
     };

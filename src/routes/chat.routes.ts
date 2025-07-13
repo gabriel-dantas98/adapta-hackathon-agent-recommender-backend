@@ -17,103 +17,61 @@ export default async function chatRoutes(fastify: FastifyInstance) {
         user_id: string;
       };
 
-      // 1. Process the message first
-      message.user_id = user_id;
       const chatResult = await chatService.processMessage(
         session_id,
         message,
         user_id
       );
 
-      // 2. Refresh user_context_enhanced embeddings
-      const userContext = await userEnhancedContextRepository.findByUserId(
-        user_id
-      );
+      console.log("chatResult", chatResult);
 
-      console.log(
-        `USER_ID: ${user_id} USER_CONTEXT: ${JSON.stringify(userContext)}`
-      );
-
-      if (userContext) {
-        await userEnhancedContextRepository.updateWithThreadSummary(
-          user_id,
-          chatResult.threadSummary
-        );
-      }
-
-      // 3. Refresh thread context embeddings
-      const recentMessages = await chatHistoryRepository.findRecentBySessionId(
+      const messages = await chatHistoryRepository.findRecentBySessionId(
         session_id,
         10
       );
 
-      let threadEmbedding: number[] | null = null;
-      if (recentMessages.length > 0) {
-        const chatMessages = recentMessages.map((msg) => ({
+      console.log("messages", messages);
+
+      const threadSummary = await summaryService.generateThreadSummary(
+        messages.map((msg) => ({
           role: msg.message.role || "user",
           content: msg.message.content || JSON.stringify(msg.message),
-        }));
+        }))
+      );
 
-        threadEmbedding = await embeddingsService.generateThreadEmbedding(
-          chatMessages,
-          chatResult.threadSummary
+      console.log("threadSummary", threadSummary);
+
+      const userEnhancedContext =
+        await userEnhancedContextRepository.updateWithThreadSummary(
+          user_id,
+          threadSummary
         );
-      }
 
-      // 4. Get all products by similarity using thread context and user_context_enhanced embeddings
-      // const recommendations =
-      //   await recommendationService.generateRecommendations({
-      //     user_id,
-      //     session_id,
-      //     limit: 10,
-      //     similarity_threshold: 0.7,
-      //   });
+      console.log("userEnhancedContext", userEnhancedContext);
+
+      // 4. Get all products embeddings by similarity using thread_summary_embedding + user_context_enhanced_embeddings
+      const recommendations =
+        await recommendationService.generateRecommendations({
+          userEnhancedContext,
+          threadSummary,
+          limit: 10,
+          similarity_threshold: 0.7,
+        });
 
       // generate response with custom system prompt, message and user_context_enhanced, thread_summary and recommendations products
 
       const response = await chatService.generateResponse(
         chatResult.threadSummary,
-        userContext
-        // recommendations
+        userEnhancedContext,
+        recommendations
       );
 
       reply.send({
         ...chatResult,
         response: response.response,
-        recommendations_used: response.recommendations_used,
         context_summary: response.context_summary,
-        // recommendations: recommendations.recommendations,
-        threadEmbedding: threadEmbedding ? threadEmbedding.slice(0, 5) : null, // Only send first 5 dimensions for debugging
+        recommendations: recommendations.recommendations,
       });
-    } catch (error) {
-      fastify.log.error(error);
-      reply.code(400).send({
-        error:
-          error instanceof Error ? error.message : "Unknown error occurred",
-      });
-    }
-  });
-
-  // Send message and process (original endpoint)
-  fastify.post("/message", async (request, reply) => {
-    try {
-      const { session_id, message, user_id } = request.body as {
-        session_id: string;
-        message: Record<string, any>;
-        user_id: string;
-      };
-
-      // we need to get all messages from the session
-      // add user_id to the message
-      message.user_id = user_id;
-
-      const result = await chatService.processMessage(
-        session_id,
-        message,
-        user_id
-      );
-
-      reply.send(result);
     } catch (error) {
       fastify.log.error(error);
       reply.code(400).send({

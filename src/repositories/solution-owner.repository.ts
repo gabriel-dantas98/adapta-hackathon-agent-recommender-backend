@@ -17,7 +17,17 @@ export class SolutionOwnerRepository {
   private tableName = "solutions_owner";
 
   async create(data: CreateSolutionOwnerInput): Promise<SolutionOwnerResponse> {
+    const methodName = "create";
+    console.log(
+      `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Starting with data:`,
+      JSON.stringify(data, null, 2)
+    );
+
     try {
+      console.log(
+        `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Generating embeddings for owner metadata`
+      );
+
       // Gera embeddings para o owner
       const embeddings =
         await embeddingsService.generateEmbeddingFromOwnerMetadata(
@@ -27,6 +37,12 @@ export class SolutionOwnerRepository {
             company_description: data.company_description || "",
           }
         );
+
+      console.log(
+        `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Embeddings generated successfully, dimension: ${
+          embeddings.length
+        }`
+      );
 
       const insertData: SolutionOwnerInsert = {
         company_name: data.company_title,
@@ -41,6 +57,15 @@ export class SolutionOwnerRepository {
         updated_at: new Date().toISOString(),
       };
 
+      console.log(
+        `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Preparing to insert:`,
+        JSON.stringify(
+          { ...insertData, embeddings: `[${embeddings.length} dimensions]` },
+          null,
+          2
+        )
+      );
+
       const { data: result, error } = await supabase
         .from(this.tableName)
         .insert(insertData)
@@ -48,17 +73,35 @@ export class SolutionOwnerRepository {
         .single();
 
       if (error) {
+        console.error(
+          `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Database error:`,
+          error
+        );
         throw error;
       }
 
-      return this.formatResponse(result);
+      const formattedResponse = this.formatResponse(result);
+      console.log(
+        `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Successfully created solution owner with ID:`,
+        result.id
+      );
+      return formattedResponse;
     } catch (error) {
+      console.error(
+        `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Error occurred:`,
+        error
+      );
       handleDatabaseError(error, "create solution owner");
       throw error;
     }
   }
 
   async findById(id: string): Promise<SolutionOwnerResponse | null> {
+    const methodName = "findById";
+    console.log(
+      `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Starting with id:${id}`
+    );
+
     try {
       const { data, error } = await supabase
         .from(this.tableName)
@@ -68,13 +111,28 @@ export class SolutionOwnerRepository {
 
       if (error) {
         if (error.code === "PGRST116") {
+          console.log(
+            `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Solution owner not found with id:${id}`
+          );
           return null;
         }
+        console.error(
+          `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Database error:`,
+          error
+        );
         throw error;
       }
 
+      console.log(
+        `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Found solution owner:`,
+        data.company_name
+      );
       return this.formatResponse(data);
     } catch (error) {
+      console.error(
+        `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Error occurred:`,
+        error
+      );
       handleDatabaseError(error, "find solution owner by id");
       throw error;
     }
@@ -83,6 +141,11 @@ export class SolutionOwnerRepository {
   async findByCompanyId(
     companyId: string
   ): Promise<SolutionOwnerResponse | null> {
+    const methodName = "findByCompanyId";
+    console.log(
+      `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Starting with companyId:${companyId}`
+    );
+
     try {
       const { data, error } = await supabase
         .from(this.tableName)
@@ -92,13 +155,28 @@ export class SolutionOwnerRepository {
 
       if (error) {
         if (error.code === "PGRST116") {
+          console.log(
+            `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Solution owner not found with companyId:${companyId}`
+          );
           return null;
         }
+        console.error(
+          `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Database error:`,
+          error
+        );
         throw error;
       }
 
+      console.log(
+        `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Found solution owner:`,
+        data.company_name
+      );
       return this.formatResponse(data);
     } catch (error) {
+      console.error(
+        `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Error occurred:`,
+        error
+      );
       handleDatabaseError(error, "find solution owner by company id");
       throw error;
     }
@@ -108,6 +186,11 @@ export class SolutionOwnerRepository {
     limit: number = 50,
     offset: number = 0
   ): Promise<SolutionOwnerResponse[]> {
+    const methodName = "findAll";
+    console.log(
+      `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Starting with limit:${limit}, offset:${offset}`
+    );
+
     try {
       const { data, error } = await supabase
         .from(this.tableName)
@@ -116,11 +199,24 @@ export class SolutionOwnerRepository {
         .range(offset, offset + limit - 1);
 
       if (error) {
+        console.error(
+          `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Database error:`,
+          error
+        );
         throw error;
       }
 
+      console.log(
+        `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Found ${
+          data.length
+        } solution owners`
+      );
       return data.map((row) => this.formatResponse(row));
     } catch (error) {
+      console.error(
+        `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Error occurred:`,
+        error
+      );
       handleDatabaseError(error, "find all solution owners");
       throw error;
     }
@@ -130,13 +226,26 @@ export class SolutionOwnerRepository {
     id: string,
     data: UpdateSolutionOwnerInput
   ): Promise<SolutionOwnerResponse | null> {
+    const methodName = "update";
+    console.log(
+      `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Starting with id:${id}, data:`,
+      JSON.stringify(data, null, 2)
+    );
+
     try {
       let embeddings: number[] | undefined;
 
       // Regenera embeddings se metadata foram alterados
       if (data.metadata || data.company_title) {
+        console.log(
+          `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Regenerating embeddings due to metadata/title changes`
+        );
+
         const current = await this.findById(id);
         if (!current) {
+          console.log(
+            `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Solution owner not found for update with id:${id}`
+          );
           return null;
         }
 
@@ -149,6 +258,12 @@ export class SolutionOwnerRepository {
         embeddings = await embeddingsService.generateEmbeddingFromOwnerMetadata(
           updatedMetadata,
           updatedPrompt
+        );
+
+        console.log(
+          `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] New embeddings generated, dimension: ${
+            embeddings.length
+          }`
         );
       }
 
@@ -166,6 +281,20 @@ export class SolutionOwnerRepository {
         updated_at: new Date().toISOString(),
       };
 
+      console.log(
+        `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Preparing to update:`,
+        JSON.stringify(
+          {
+            ...updateData,
+            embeddings: embeddings
+              ? `[${embeddings.length} dimensions]`
+              : undefined,
+          },
+          null,
+          2
+        )
+      );
+
       const { data: result, error } = await supabase
         .from(this.tableName)
         .update(updateData)
@@ -175,19 +304,39 @@ export class SolutionOwnerRepository {
 
       if (error) {
         if (error.code === "PGRST116") {
+          console.log(
+            `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Solution owner not found for update with id:${id}`
+          );
           return null;
         }
+        console.error(
+          `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Database error:`,
+          error
+        );
         throw error;
       }
 
+      console.log(
+        `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Successfully updated solution owner with ID:`,
+        result.id
+      );
       return this.formatResponse(result);
     } catch (error) {
+      console.error(
+        `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Error occurred:`,
+        error
+      );
       handleDatabaseError(error, "update solution owner");
       throw error;
     }
   }
 
   async delete(id: string): Promise<boolean> {
+    const methodName = "delete";
+    console.log(
+      `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Starting with id:${id}`
+    );
+
     try {
       const { error } = await supabase
         .from(this.tableName)
@@ -195,11 +344,22 @@ export class SolutionOwnerRepository {
         .eq("id", id);
 
       if (error) {
+        console.error(
+          `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Database error:`,
+          error
+        );
         throw error;
       }
 
+      console.log(
+        `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Successfully deleted solution owner with ID:${id}`
+      );
       return true;
     } catch (error) {
+      console.error(
+        `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Error occurred:`,
+        error
+      );
       handleDatabaseError(error, "delete solution owner");
       throw error;
     }
@@ -210,6 +370,13 @@ export class SolutionOwnerRepository {
     threshold: number = 0.7,
     limit: number = 10
   ): Promise<Array<SolutionOwnerResponse & { similarity_score: number }>> {
+    const methodName = "searchByEmbedding";
+    console.log(
+      `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Starting with embedding dimension:${
+        embedding.length
+      }, threshold:${threshold}, limit:${limit}`
+    );
+
     try {
       const { data, error } = await supabase.rpc("match_solution_owners", {
         query_embedding: embedding,
@@ -218,14 +385,27 @@ export class SolutionOwnerRepository {
       });
 
       if (error) {
+        console.error(
+          `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Database error:`,
+          error
+        );
         throw error;
       }
 
+      console.log(
+        `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Found ${
+          data.length
+        } solution owners matching embedding criteria`
+      );
       return data.map((row: any) => ({
         ...this.formatResponse(row),
         similarity_score: row.similarity,
       }));
     } catch (error) {
+      console.error(
+        `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Error occurred:`,
+        error
+      );
       handleDatabaseError(error, "search solution owners by embedding");
       throw error;
     }
