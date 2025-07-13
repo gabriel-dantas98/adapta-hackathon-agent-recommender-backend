@@ -24,7 +24,9 @@ export class SolutionProductRepository {
       // Gera embeddings para o produto
       const embeddings = await embeddingsService.generateEmbeddingFromMetadata(
         data.metadata,
-        data.output_base_prompt
+        data.title,
+        data.description,
+        data.categories
       );
 
       const insertData: SolutionProductInsert = {
@@ -39,7 +41,7 @@ export class SolutionProductRepository {
         .insert(insertData)
         .select("*")
         .single();
-
+      console.log("result FROM DATABASE", result);
       if (error) {
         throw error;
       }
@@ -158,12 +160,12 @@ export class SolutionProductRepository {
         }
 
         const updatedMetadata = data.metadata || current.metadata;
-        const updatedPrompt =
-          data.output_base_prompt || current.output_base_prompt;
 
         embeddings = await embeddingsService.generateEmbeddingFromMetadata(
           updatedMetadata,
-          updatedPrompt
+          current.title,
+          current.description,
+          current.categories
         );
       }
 
@@ -319,7 +321,11 @@ export class SolutionProductRepository {
       product_id: row.product_id,
       owner_id: row.owner_id,
       metadata: row.metadata,
-      output_base_prompt: row.output_base_prompt,
+      title: row.title,
+      categories: row.categories,
+      description: row.description,
+      url: row.url,
+      image_url: row.image_url,
       created_at: row.created_at,
       updated_at: row.updated_at,
     };

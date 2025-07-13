@@ -2,17 +2,17 @@ import { z } from "zod";
 
 // Solution Owner DTOs
 export const CreateSolutionOwnerDto = z.object({
-  company_name: z.string().min(1),
-  domain: z.string().optional(),
+  company_title: z.string().min(1),
+  url: z.string().optional(),
+  company_description: z.string().optional(),
   metadata: z.record(z.any()),
-  output_base_prompt: z.record(z.any()),
 });
 
 export const UpdateSolutionOwnerDto = z.object({
-  company_name: z.string().min(1).optional(),
-  domain: z.string().optional(),
+  company_title: z.string().min(1).optional(),
+  url: z.string().optional(),
+  company_description: z.string().optional(),
   metadata: z.record(z.any()).optional(),
-  output_base_prompt: z.record(z.any()).optional(),
 });
 
 export const SolutionOwnerResponseDto = z.object({
@@ -28,10 +28,19 @@ export const SolutionOwnerResponseDto = z.object({
 
 // Solution Owner Products DTOs
 export const CreateSolutionProductDto = z.object({
+  product_id: z.string(),
   owner_id: z.string(),
   metadata: z.record(z.any()),
-  output_base_prompt: z.record(z.any()),
+  title: z.string(),
+  categories: z.array(z.string()),
+  description: z.string(),
+  url: z.string(),
+  image_url: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
 });
+
+//
 
 export const UpdateSolutionProductDto = z.object({
   owner_id: z.string().optional(),
@@ -44,7 +53,11 @@ export const SolutionProductResponseDto = z.object({
   product_id: z.string(),
   owner_id: z.string().nullable(),
   metadata: z.record(z.any()),
-  output_base_prompt: z.record(z.any()),
+  title: z.string(),
+  categories: z.array(z.string()),
+  description: z.string(),
+  url: z.string(),
+  image_url: z.string(),
   created_at: z.string(),
   updated_at: z.string(),
 });
@@ -79,6 +92,7 @@ export const UserEnhancedContextResponseDto = z.object({
   user_id: z.string(),
   metadata: z.record(z.any()),
   output_base_prompt: z.record(z.any()),
+  embeddings: z.array(z.number()).nullable(),
   created_at: z.string(),
   updated_at: z.string(),
 });

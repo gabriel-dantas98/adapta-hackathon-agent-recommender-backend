@@ -39,22 +39,69 @@ class EmbeddingsService {
   }
 
   /**
-   * Combina metadata e prompt para gerar embedding
+   * Combina metadata e prompt para gerar embedding (versão para solution products)
    */
   async generateEmbeddingFromMetadata(
     metadata: Record<string, any>,
-    outputPrompt: Record<string, any>
+    title: string,
+    description: string,
+    categories: string[]
   ): Promise<number[]> {
     try {
       // Combina metadata e prompt em um texto para embedding
       const combinedText = this.combineMetadataAndPrompt(
         metadata,
-        outputPrompt
+        title,
+        description,
+        categories
       );
+
       return await this.generateEmbedding(combinedText);
     } catch (error) {
       console.error("Error generating embedding from metadata:", error);
       throw new Error("Failed to generate embedding from metadata");
+    }
+  }
+
+  /**
+   * Combina metadata e prompt para gerar embedding (versão para solution owners)
+   */
+  async generateEmbeddingFromOwnerMetadata(
+    metadata: Record<string, any>,
+    outputPrompt: Record<string, any>
+  ): Promise<number[]> {
+    try {
+      // Combina metadata e prompt em um texto para embedding
+      const combinedText = this.combineOwnerMetadataAndPrompt(
+        metadata,
+        outputPrompt
+      );
+
+      return await this.generateEmbedding(combinedText);
+    } catch (error) {
+      console.error("Error generating embedding from owner metadata:", error);
+      throw new Error("Failed to generate embedding from owner metadata");
+    }
+  }
+
+  /**
+   * Combina metadata e prompt para gerar embedding (versão para user context)
+   */
+  async generateEmbeddingFromUserContext(
+    metadata: Record<string, any>,
+    outputPrompt: Record<string, any>
+  ): Promise<number[]> {
+    try {
+      // Combina metadata e prompt em um texto para embedding
+      const combinedText = this.combineOwnerMetadataAndPrompt(
+        metadata,
+        outputPrompt
+      );
+
+      return await this.generateEmbedding(combinedText);
+    } catch (error) {
+      console.error("Error generating embedding from user context:", error);
+      throw new Error("Failed to generate embedding from user context");
     }
   }
 
@@ -74,21 +121,37 @@ class EmbeddingsService {
   }
 
   /**
-   * Combina metadata e prompt em um texto único
+   * Combina metadata e prompt em um texto único (versão para solution products)
    */
   private combineMetadataAndPrompt(
     metadata: Record<string, any>,
+    title: string,
+    description: string,
+    categories: string[]
+  ): string {
+    const metadataText = {
+      ...metadata,
+      title,
+      description,
+      categories: categories.join(", "),
+    };
+    console.log("[COMBINE METADATA AND PROMPT]: ", metadataText);
+    return JSON.stringify(metadataText);
+  }
+
+  /**
+   * Combina metadata e prompt em um texto único (versão para owners e user context)
+   */
+  private combineOwnerMetadataAndPrompt(
+    metadata: Record<string, any>,
     outputPrompt: Record<string, any>
   ): string {
-    const metadataText = Object.entries(metadata)
-      .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
-      .join(", ");
-
-    const promptText = Object.entries(outputPrompt)
-      .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
-      .join(", ");
-
-    return `${metadataText} | ${promptText}`;
+    const metadataText = {
+      ...metadata,
+      ...outputPrompt,
+    };
+    console.log("[COMBINE OWNER METADATA AND PROMPT]: ", metadataText);
+    return JSON.stringify(metadataText);
   }
 
   /**
@@ -124,7 +187,10 @@ class EmbeddingsService {
     threadSummary?: string
   ): Promise<number[]> {
     try {
-      const baseText = this.combineMetadataAndPrompt(metadata, outputPrompt);
+      const baseText = this.combineOwnerMetadataAndPrompt(
+        metadata,
+        outputPrompt
+      );
       const combinedText = threadSummary
         ? `${baseText} | Thread Summary: ${threadSummary}`
         : baseText;

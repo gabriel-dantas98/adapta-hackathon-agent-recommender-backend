@@ -19,13 +19,23 @@ export class SolutionOwnerRepository {
   async create(data: CreateSolutionOwnerInput): Promise<SolutionOwnerResponse> {
     try {
       // Gera embeddings para o owner
-      const embeddings = await embeddingsService.generateEmbeddingFromMetadata(
-        data.metadata,
-        data.output_base_prompt
-      );
+      const embeddings =
+        await embeddingsService.generateEmbeddingFromOwnerMetadata(
+          data.metadata,
+          {
+            company_title: data.company_title,
+            company_description: data.company_description || "",
+          }
+        );
 
       const insertData: SolutionOwnerInsert = {
-        ...data,
+        company_name: data.company_title,
+        domain: data.url || null,
+        metadata: data.metadata,
+        output_base_prompt: {
+          company_title: data.company_title,
+          company_description: data.company_description || "",
+        },
         embeddings,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -123,25 +133,35 @@ export class SolutionOwnerRepository {
     try {
       let embeddings: number[] | undefined;
 
-      // Regenera embeddings se metadata ou output_base_prompt foram alterados
-      if (data.metadata || data.output_base_prompt) {
+      // Regenera embeddings se metadata foram alterados
+      if (data.metadata || data.company_title) {
         const current = await this.findById(id);
         if (!current) {
           return null;
         }
 
         const updatedMetadata = data.metadata || current.metadata;
-        const updatedPrompt =
-          data.output_base_prompt || current.output_base_prompt;
+        const updatedPrompt = {
+          company_title: data.company_title || current.company_name,
+          company_description: data.company_description || "",
+        };
 
-        embeddings = await embeddingsService.generateEmbeddingFromMetadata(
+        embeddings = await embeddingsService.generateEmbeddingFromOwnerMetadata(
           updatedMetadata,
           updatedPrompt
         );
       }
 
       const updateData: SolutionOwnerUpdate = {
-        ...data,
+        ...(data.company_title && { company_name: data.company_title }),
+        ...(data.url !== undefined && { domain: data.url }),
+        ...(data.metadata && { metadata: data.metadata }),
+        ...(data.company_title && {
+          output_base_prompt: {
+            company_title: data.company_title,
+            company_description: data.company_description || "",
+          },
+        }),
         ...(embeddings && { embeddings }),
         updated_at: new Date().toISOString(),
       };

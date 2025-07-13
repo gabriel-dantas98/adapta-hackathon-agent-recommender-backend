@@ -20,15 +20,14 @@ export class UserEnhancedContextRepository {
   async create(data: OnboardingInput): Promise<UserEnhancedContextResponse> {
     try {
       // Gera embeddings para o contexto do usuário
-      const embeddings = await embeddingsService.generateEmbeddingFromMetadata(
-        data.metadata,
-        data.output_base_prompt
-      );
+      const embeddings =
+        await embeddingsService.generateEmbeddingFromUserContext(
+          data.metadata,
+          data.output_base_prompt
+        );
 
       const insertData: UserEnhancedContextInsert = {
-        user_id: data.user_id,
-        metadata: data.metadata,
-        output_base_prompt: data.output_base_prompt,
+        ...data,
         embeddings,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -47,6 +46,28 @@ export class UserEnhancedContextRepository {
       return this.formatResponse(result);
     } catch (error) {
       handleDatabaseError(error, "create user enhanced context");
+      throw error;
+    }
+  }
+
+  async findById(id: string): Promise<UserEnhancedContextResponse | null> {
+    try {
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) {
+        if (error.code === "PGRST116") {
+          return null;
+        }
+        throw error;
+      }
+
+      return this.formatResponse(data);
+    } catch (error) {
+      handleDatabaseError(error, "find user enhanced context by id");
       throw error;
     }
   }
@@ -100,24 +121,24 @@ export class UserEnhancedContextRepository {
   }
 
   async update(
-    userId: string,
+    id: string,
     data: UpdateUserContextInput
   ): Promise<UserEnhancedContextResponse | null> {
     try {
-      const current = await this.findByUserId(userId);
-      if (!current) {
-        return null;
-      }
-
       let embeddings: number[] | undefined;
 
       // Regenera embeddings se metadata ou output_base_prompt foram alterados
       if (data.metadata || data.output_base_prompt) {
+        const current = await this.findById(id);
+        if (!current) {
+          return null;
+        }
+
         const updatedMetadata = data.metadata || current.metadata;
         const updatedPrompt =
           data.output_base_prompt || current.output_base_prompt;
 
-        embeddings = await embeddingsService.generateEmbeddingFromMetadata(
+        embeddings = await embeddingsService.generateEmbeddingFromUserContext(
           updatedMetadata,
           updatedPrompt
         );
@@ -132,11 +153,14 @@ export class UserEnhancedContextRepository {
       const { data: result, error } = await supabase
         .from(this.tableName)
         .update(updateData)
-        .eq("user_id", userId)
+        .eq("id", id)
         .select("*")
         .single();
 
       if (error) {
+        if (error.code === "PGRST116") {
+          return null;
+        }
         throw error;
       }
 
@@ -331,6 +355,7 @@ export class UserEnhancedContextRepository {
       user_id: row.user_id,
       metadata: row.metadata,
       output_base_prompt: row.output_base_prompt,
+      embeddings: row.embeddings,
       created_at: row.created_at,
       updated_at: row.updated_at,
     };

@@ -19,7 +19,11 @@ export default async function solutionProductRoutes(fastify: FastifyInstance) {
               product_id: { type: "string" },
               owner_id: { type: "string", nullable: true },
               metadata: { type: "object" },
-              output_base_prompt: { type: "object" },
+              title: { type: "string" },
+              categories: { type: "array", items: { type: "string" } },
+              description: { type: "string" },
+              url: { type: "string" },
+              image_url: { type: "string" },
               created_at: { type: "string" },
               updated_at: { type: "string" },
             },
@@ -32,10 +36,12 @@ export default async function solutionProductRoutes(fastify: FastifyInstance) {
         const data = CreateSolutionProductDto.parse(request.body);
         const result = await solutionProductRepository.create(data);
 
+        console.log("result", result);
+
         reply.code(201).send(result);
       } catch (error) {
         fastify.log.error(error);
-        reply.code(400).send({ error: error.message });
+        reply.code(400).send({ error: (error as Error).message });
       }
     }
   );
@@ -63,6 +69,11 @@ export default async function solutionProductRoutes(fastify: FastifyInstance) {
                 product_id: { type: "string" },
                 owner_id: { type: "string", nullable: true },
                 metadata: { type: "object" },
+                title: { type: "string" },
+                categories: { type: "array", items: { type: "string" } },
+                description: { type: "string" },
+                url: { type: "string" },
+                image_url: { type: "string" },
                 output_base_prompt: { type: "object" },
                 created_at: { type: "string" },
                 updated_at: { type: "string" },
@@ -98,7 +109,7 @@ export default async function solutionProductRoutes(fastify: FastifyInstance) {
         reply.send(result);
       } catch (error) {
         fastify.log.error(error);
-        reply.code(500).send({ error: error.message });
+        reply.code(500).send({ error: (error as Error).message });
       }
     }
   );
@@ -123,6 +134,11 @@ export default async function solutionProductRoutes(fastify: FastifyInstance) {
               product_id: { type: "string" },
               owner_id: { type: "string", nullable: true },
               metadata: { type: "object" },
+              title: { type: "string" },
+              categories: { type: "array", items: { type: "string" } },
+              description: { type: "string" },
+              url: { type: "string" },
+              image_url: { type: "string" },
               output_base_prompt: { type: "object" },
               created_at: { type: "string" },
               updated_at: { type: "string" },
@@ -150,7 +166,7 @@ export default async function solutionProductRoutes(fastify: FastifyInstance) {
         reply.send(result);
       } catch (error) {
         fastify.log.error(error);
-        reply.code(500).send({ error: error.message });
+        reply.code(500).send({ error: (error as Error).message });
       }
     }
   );
@@ -175,6 +191,11 @@ export default async function solutionProductRoutes(fastify: FastifyInstance) {
               product_id: { type: "string" },
               owner_id: { type: "string", nullable: true },
               metadata: { type: "object" },
+              title: { type: "string" },
+              categories: { type: "array", items: { type: "string" } },
+              description: { type: "string" },
+              url: { type: "string" },
+              image_url: { type: "string" },
               output_base_prompt: { type: "object" },
               created_at: { type: "string" },
               updated_at: { type: "string" },
@@ -204,7 +225,7 @@ export default async function solutionProductRoutes(fastify: FastifyInstance) {
         reply.send(result);
       } catch (error) {
         fastify.log.error(error);
-        reply.code(500).send({ error: error.message });
+        reply.code(500).send({ error: (error as Error).message });
       }
     }
   );
@@ -258,7 +279,7 @@ export default async function solutionProductRoutes(fastify: FastifyInstance) {
         reply.send(result);
       } catch (error) {
         fastify.log.error(error);
-        reply.code(400).send({ error: error.message });
+        reply.code(400).send({ error: (error as Error).message });
       }
     }
   );
@@ -303,7 +324,7 @@ export default async function solutionProductRoutes(fastify: FastifyInstance) {
         reply.code(204).send();
       } catch (error) {
         fastify.log.error(error);
-        reply.code(500).send({ error: error.message });
+        reply.code(500).send({ error: (error as Error).message });
       }
     }
   );
@@ -370,7 +391,7 @@ export default async function solutionProductRoutes(fastify: FastifyInstance) {
         reply.send(result);
       } catch (error) {
         fastify.log.error(error);
-        reply.code(500).send({ error: error.message });
+        reply.code(500).send({ error: (error as Error).message });
       }
     }
   );
