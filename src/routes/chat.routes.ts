@@ -17,18 +17,12 @@ export default async function chatRoutes(fastify: FastifyInstance) {
         user_id: string;
       };
 
-      const chatResult = await chatService.processMessage(
-        session_id,
-        message,
-        user_id
-      );
+      const [chatResult, messages] = await Promise.all([
+        chatService.processMessage(session_id, message, user_id),
+        chatHistoryRepository.findRecentBySessionId(session_id, 10),
+      ]);
 
       console.log("chatResult", chatResult);
-
-      const messages = await chatHistoryRepository.findRecentBySessionId(
-        session_id,
-        10
-      );
 
       console.log("messages", messages);
 
@@ -68,7 +62,7 @@ export default async function chatRoutes(fastify: FastifyInstance) {
           },
           threadSummary,
           limit: 10,
-          similarity_threshold: 0.7,
+          similarity_threshold: 0.5,
         });
 
       // generate response with custom system prompt, message and user_context_enhanced, thread_summary and recommendations products

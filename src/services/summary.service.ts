@@ -2,6 +2,11 @@ import { ChatOpenAI } from "@langchain/openai";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 import { env } from "../config/env";
+import {
+  RECOMMENDATION_CONTEXT_PROMPT,
+  THREAD_SUMMARY_PROMPT,
+  USER_CONTEXT_SUMMARY_PROMPT,
+} from "@/lib/prompts";
 
 class SummaryService {
   private llm: ChatOpenAI;
@@ -247,47 +252,7 @@ class SummaryService {
       `[${new Date().toISOString()}] [SummaryService.${methodName}] Creating thread summary prompt template`
     );
 
-    const template = `
-# Você é um assistente hermenêutico-computacional: além de condensar fatos, usa lentes filosóficas (Fenomenologia, Hermenêutica, Psicanálise, Nietzsche/Foucault, Filosofia da Linguagem) para inferir motivações, desejos e tensões que o próprio interlocutor ainda não percebe. Sua tarefa é criar um resumo conciso e informativo da seguinte conversa.
-
-{messages}
-
-CONVERSA ({message_count} mensagens):
-
-RESUMO ANTERIOR:
-{previous_summary}
-
-INSTRUÇÕES:
-
-Crie um resumo que capture os pontos principais da conversa.
-
-Extraia intenções, necessidades e contexto implícitos do usuário (emoções, drivers de poder, desejos de pertencimento, perfecionismo etc.).
-
-Se houver um resumo anterior, integre as informações relevantes.
-
-Mantenha o resumo entre 1000 tokens.
-
-Use linguagem clara, objetiva e sem juízo moral.
-
-Foque em dados que ajudem a recomendar produtos ou próximos passos.
-
-Aplique as lentes filosóficas:
-
-Fenomenologia → relacione o dito ao horizonte de experiência do usuário.
-
-Psicanálise → note repetições, lapsos, metáforas que revelem desejo.
-
-Nietzsche/Foucault → identifique vontades de poder e construções de status.
-
-Filosofia da Linguagem → classifique atos de fala (pedido, promessa, confissão).
-
-Diferencie Fatos Observados de Inferências e atribua grau de confiança (alto/médio/baixo) às hipóteses.
-
-Seja sucinto: omita detalhes operacionais irrelevantes; destaque somente o que ilumina motivações e orienta recomendações.
-
-RESUMO:`;
-
-    return PromptTemplate.fromTemplate(template);
+    return PromptTemplate.fromTemplate(THREAD_SUMMARY_PROMPT);
   }
 
   /**
@@ -299,29 +264,7 @@ RESUMO:`;
       `[${new Date().toISOString()}] [SummaryService.${methodName}] Creating user context summary prompt template`
     );
 
-    const template = `
-Você é um assistente especializado em manter contexto de usuário. Sua tarefa é atualizar o contexto do usuário com base em novas informações.
-
-CONTEXTO ATUAL:
-{current_context}
-
-RESUMO DA THREAD:
-{thread_summary}
-
-CONTEXTO ANTERIOR:
-{previous_context_summary}
-
-INSTRUÇÕES:
-1. Atualize o contexto do usuário integrando as novas informações
-2. Mantenha informações relevantes do contexto anterior
-3. Priorize informações que ajudem em recomendações de produtos
-4. Inclua preferências, necessidades e padrões de comportamento identificados
-5. Mantenha o resumo entre 150-400 palavras
-6. Use linguagem clara e estruturada
-
-CONTEXTO ATUALIZADO:`;
-
-    return PromptTemplate.fromTemplate(template);
+    return PromptTemplate.fromTemplate(USER_CONTEXT_SUMMARY_PROMPT);
   }
 
   /**
@@ -333,29 +276,7 @@ CONTEXTO ATUALIZADO:`;
       `[${new Date().toISOString()}] [SummaryService.${methodName}] Creating recommendation context prompt template`
     );
 
-    const template = `
-Você é um assistente especializado em preparar contexto para recomendações de produtos. Sua tarefa é criar um resumo focado em recomendações.
-
-CONTEXTO DO USUÁRIO:
-{user_context}
-
-RESUMO DA THREAD:
-{thread_summary}
-
-MENSAGENS RECENTES:
-{recent_messages}
-
-INSTRUÇÕES:
-1. Crie um resumo focado em necessidades e preferências do usuário
-2. Identifique padrões de comportamento e interesse
-3. Destaque requisitos específicos para produtos/soluções
-4. Inclua informações sobre contexto de negócio se relevante
-5. Mantenha o resumo entre 100-250 palavras
-6. Use linguagem que facilite matching com produtos
-
-CONTEXTO PARA RECOMENDAÇÃO:`;
-
-    return PromptTemplate.fromTemplate(template);
+    return PromptTemplate.fromTemplate(RECOMMENDATION_CONTEXT_PROMPT);
   }
 }
 

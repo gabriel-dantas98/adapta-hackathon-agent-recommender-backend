@@ -11,6 +11,7 @@ import {
   RecommendationListResponse,
   UserEnhancedContextResponse,
 } from "../types/dtos";
+import { CREATE_CHAT_RESPONSE_PROMPT } from "@/lib/prompts";
 
 class ChatService {
   /**
@@ -605,8 +606,8 @@ class ChatService {
       );
       const llm = new ChatOpenAI({
         openAIApiKey: env.OPENAI_API_KEY,
-        modelName: "gpt-4",
-        temperature: 0.7,
+        modelName: "o4-mini-2025-04-16",
+        temperature: 1,
       });
 
       const outputParser = new StringOutputParser();
@@ -657,28 +658,7 @@ class ChatService {
       `[${new Date().toISOString()}] [ChatService.${methodName}] Creating chat response prompt template`
     );
 
-    const template = `
-Você é um assistente de IA especializado em gerar respostas contextualizadas.
-
-RESUMO DA CONVERSA:
-{thread_summary}
-
-CONTEXTO DO USUÁRIO:
-{user_context}
-
-RECOMENDAÇÕES DISPONÍVEIS:
-{recommendations}
-
-INSTRUÇÕES:
-1. Gere uma resposta natural e útil baseada no contexto fornecido
-2. Use as recomendações quando relevantes
-3. Mantenha o tom conversacional e profissional
-4. Seja específico e actionável quando possível
-5. Mantenha a resposta entre 100-300 palavras
-
-RESPOSTA:`;
-
-    return PromptTemplate.fromTemplate(template);
+    return PromptTemplate.fromTemplate(CREATE_CHAT_RESPONSE_PROMPT);
   }
 
   /**

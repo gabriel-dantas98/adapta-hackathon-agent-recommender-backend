@@ -469,7 +469,7 @@ export class SolutionProductRepository {
     );
 
     try {
-      const { data, error } = await supabase.rpc("match_products_simple", {
+      const { data, error } = await supabase.rpc("match_products_full", {
         _user_embedding: userEmbedding,
         _thread_embedding: threadEmbedding,
         _k: limit,
@@ -510,6 +510,8 @@ export class SolutionProductRepository {
       owner_id: row.owner_id,
       title: row.title,
       description: row.description,
+      image_url: row.image_url,
+      url: row.url,
       categories: row.categories,
       metadata: row.metadata,
       output_base_prompt: row.output_base_prompt,
