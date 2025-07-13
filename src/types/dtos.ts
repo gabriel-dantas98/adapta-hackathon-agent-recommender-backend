@@ -1,3 +1,4 @@
+import { describe } from "node:test";
 import { z } from "zod";
 
 // Solution Owner DTOs
@@ -18,7 +19,6 @@ export const UpdateSolutionOwnerDto = z.object({
 export const SolutionOwnerResponseDto = z.object({
   id: z.string(),
   company_id: z.string(),
-  company_name: z.string(),
   domain: z.string().nullable(),
   metadata: z.record(z.any()),
   output_base_prompt: z.record(z.any()),
@@ -80,9 +80,16 @@ export const OnboardingDto = z.object({
   output_base_prompt: z.record(z.any()),
 });
 
-export const UpdateUserContextDto = z.object({
+export const UpdateOrCreateUserContextDto = z.object({
+  id: z.number().optional(),
+  user_id: z.string().optional(),
+  context_id: z.string().optional(),
+  summary: z.string().optional().nullable(),
   metadata: z.record(z.any()).optional(),
   output_base_prompt: z.record(z.any()).optional(),
+  embeddings: z.array(z.number()).optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
 });
 
 export const UserEnhancedContextResponseDto = z.object({
@@ -114,12 +121,13 @@ export const RecommendationRequestDto = z.object({
 export const RecommendationResponseDto = z.object({
   product_id: z.string(),
   similarity_score: z.number(),
+  owner_id: z.string(),
+  categories: z.array(z.string()),
+  description: z.string(),
+  url: z.string(),
+  image_url: z.string(),
+  title: z.string(),
   metadata: z.record(z.any()),
-  output_base_prompt: z.record(z.any()),
-  owner_info: z.object({
-    company_name: z.string(),
-    domain: z.string().nullable(),
-  }),
 });
 
 export const RecommendationListResponseDto = z.object({
@@ -154,7 +162,9 @@ export type ChatMessage = z.infer<typeof ChatMessageDto>;
 export type ChatHistoryResponse = z.infer<typeof ChatHistoryResponseDto>;
 
 export type OnboardingInput = z.infer<typeof OnboardingDto>;
-export type UpdateUserContextInput = z.infer<typeof UpdateUserContextDto>;
+export type UpdateUserContextInput = z.infer<
+  typeof UpdateOrCreateUserContextDto
+>;
 export type UserEnhancedContextResponse = z.infer<
   typeof UserEnhancedContextResponseDto
 >;

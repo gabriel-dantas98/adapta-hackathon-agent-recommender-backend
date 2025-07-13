@@ -469,16 +469,11 @@ export class SolutionProductRepository {
     );
 
     try {
-      const { data, error } = await supabase.rpc(
-        "match_products_with_owner_info",
-        {
-          user_embedding: userEmbedding,
-          thread_embedding: threadEmbedding,
-          user_weight: userWeight,
-          thread_weight: threadWeight,
-          match_count: limit,
-        }
-      );
+      const { data, error } = await supabase.rpc("match_products_simple", {
+        _user_embedding: userEmbedding,
+        _thread_embedding: threadEmbedding,
+        _k: limit,
+      });
 
       if (error) {
         console.error(

@@ -343,25 +343,8 @@ class EmbeddingsService {
     }
   }
 
-  /**
-   * Gera embedding para contexto de usuário
-   */
-  async generateUserContextEmbedding(
-    metadata: Record<string, any>,
-    outputPrompt: Record<string, any>,
-    threadSummary?: string,
-    currentContext?: string
-  ): Promise<{ embedding: number[]; summary: string }> {
-    const methodName = "generateUserContextEmbedding";
-    console.log(
-      `[${new Date().toISOString()}] [EmbeddingsService.${methodName}] Starting with user context, thread summary: ${
-        threadSummary ? "provided" : "not provided"
-      }`
-    );
-
-    try {
-      const prompt = new PromptTemplate({
-        template: `## Role and Objective
+  private createRecommendationContextPrompt(): PromptTemplate {
+    const template = `## Role and Objective
 
 You are an **extremely discerning HR recruiter** tasked with analyzing a user’s message history to map out both **explicit and implicit characteristics** of the user. Your objective is to build a comprehensive **personality profile** of the user from their communications.
 
@@ -411,14 +394,34 @@ Remember to **remain subtle** in analysis and continuously update the profile as
 ## Thread Summary
 
 {threadSummary}
-`,
-        inputVariables: ["thread_summary", "currentContext"],
-      });
+`;
+
+    return PromptTemplate.fromTemplate(template);
+  }
+
+  /**
+   * Gera embedding para contexto de usuário
+   */
+  async generateUserContextEmbedding(
+    metadata: Record<string, any>,
+    outputPrompt: Record<string, any>,
+    threadSummary?: string,
+    currentContext?: string
+  ): Promise<{ embedding: number[]; summary: string }> {
+    const methodName = "generateUserContextEmbedding";
+    console.log(
+      `[${new Date().toISOString()}] [EmbeddingsService.${methodName}] Starting with user context, thread summary: ${
+        threadSummary ? "provided" : "not provided"
+      }`
+    );
+
+    try {
+      const prompt = this.createRecommendationContextPrompt();
 
       const chain = prompt.pipe(this.llm).pipe(this.outputParser);
       const summary = await chain.invoke({
-        thread_summary: threadSummary,
         currentContext: currentContext,
+        threadSummary: threadSummary,
       });
 
       console.log(

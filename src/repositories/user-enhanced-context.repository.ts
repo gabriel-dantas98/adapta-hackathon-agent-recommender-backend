@@ -43,7 +43,9 @@ export class UserEnhancedContextRepository {
       );
 
       const insertData: UserEnhancedContextInsert = {
-        ...data,
+        user_id: data.user_id,
+        metadata: data.metadata,
+        output_base_prompt: data.output_base_prompt,
         embeddings: JSON.stringify(embeddings),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -84,6 +86,66 @@ export class UserEnhancedContextRepository {
         error
       );
       handleDatabaseError(error, "create user enhanced context");
+      throw error;
+    }
+  }
+
+  async upsert(data: OnboardingInput): Promise<UserEnhancedContextResponse> {
+    const methodName = "upsert";
+    console.log(
+      `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Starting with data:`,
+      JSON.stringify(data, null, 2)
+    );
+
+    try {
+      // Verifica se já existe um contexto para o usuário
+      const existingContext = await this.findByUserId(data.user_id);
+
+      if (existingContext) {
+        console.log(
+          `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Found existing context for user:${
+            data.user_id
+          }, updating...`
+        );
+
+        // Atualiza o contexto existente
+        const updatedContext = await this.update(existingContext.id, {
+          metadata: data.metadata,
+          output_base_prompt: data.output_base_prompt,
+        });
+
+        if (!updatedContext) {
+          throw new Error("Failed to update existing context");
+        }
+
+        console.log(
+          `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Successfully updated existing context for user:${
+            data.user_id
+          }`
+        );
+        return updatedContext;
+      } else {
+        console.log(
+          `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] No existing context found for user:${
+            data.user_id
+          }, creating new...`
+        );
+
+        // Cria um novo contexto
+        const newContext = await this.create(data);
+        console.log(
+          `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Successfully created new context for user:${
+            data.user_id
+          }`
+        );
+        return newContext;
+      }
+    } catch (error) {
+      console.error(
+        `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Error occurred:`,
+        error
+      );
+      handleDatabaseError(error, "upsert user enhanced context");
       throw error;
     }
   }
@@ -219,8 +281,8 @@ export class UserEnhancedContextRepository {
   }
 
   async update(
-    id: string,
-    data: UpdateUserContextInput
+    data: UpdateUserContextInput,
+    id?: string
   ): Promise<UserEnhancedContextResponse | null> {
     const methodName = "update";
     console.log(
@@ -330,6 +392,9 @@ export class UserEnhancedContextRepository {
       metadata ? JSON.stringify(metadata, null, 2) : "none"
     );
 
+    let response: UserEnhancedContextResponse | null = null;
+    let error: any;
+
     try {
       const current = await this.findByUserId(userId);
       if (!current) {
@@ -364,31 +429,51 @@ export class UserEnhancedContextRepository {
         }`
       );
 
-      const updateData: UserEnhancedContextUpdate = {
-        ...current,
-        embeddings: JSON.stringify(embedding),
-        updated_at: new Date().toISOString(),
-      };
+      if (current) {
+        const updateData: UserEnhancedContextUpdate = {
+          ...current,
+          embeddings: JSON.stringify(embedding),
+          output_base_prompt: summary || {},
+          updated_at: new Date().toISOString(),
+        };
+        const { data: result, error } = await supabase
+          .from(this.tableName)
+          .update(updateData)
+          .eq("id", current.id)
+          .select("*")
+          .single();
 
-      const { data: result, error } = await supabase
-        .from(this.tableName)
-        .update(updateData)
-        .eq("user_id", userId)
-        .select("*")
-        .single();
+        if (error) {
+          throw error;
+        }
 
-      if (error) {
-        console.error(
-          `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Database error:`,
-          error
-        );
-        throw error;
+        response = this.formatResponse(result);
+      } else {
+        const insertData: UserEnhancedContextInsert = {
+          user_id: userId,
+          metadata: {},
+          embeddings: JSON.stringify(embedding),
+          output_base_prompt: summary || {},
+        };
+
+        const { data: result, error } = await supabase
+          .from(this.tableName)
+          .insert(insertData)
+          .select("*")
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        response = this.formatResponse(result);
       }
 
       console.log(
         `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Successfully updated user enhanced context with thread summary`
       );
-      return this.formatResponse(result);
+
+      return response;
     } catch (error) {
       console.error(
         `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Error occurred:`,
@@ -397,6 +482,84 @@ export class UserEnhancedContextRepository {
       handleDatabaseError(
         error,
         "update user enhanced context with thread summary"
+      );
+      throw error;
+    }
+  }
+
+  async upsertWithThreadSummary(
+    userId: string,
+    threadSummary: string,
+    metadata?: Record<string, any>
+  ): Promise<UserEnhancedContextResponse> {
+    const methodName = "upsertWithThreadSummary";
+    console.log(
+      `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Starting with userId:${userId}, threadSummary length:${
+        threadSummary.length
+      }, metadata:`,
+      metadata ? JSON.stringify(metadata, null, 2) : "none"
+    );
+
+    try {
+      const current = await this.findByUserId(userId);
+
+      if (current) {
+        console.log(
+          `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Found existing context for user:${userId}, updating with thread summary...`
+        );
+
+        const updatedContext = await this.updateWithThreadSummary(
+          userId,
+          threadSummary,
+          metadata
+        );
+
+        if (!updatedContext) {
+          throw new Error(
+            "Failed to update existing context with thread summary"
+          );
+        }
+
+        console.log(
+          `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Successfully updated existing context with thread summary for user:${userId}`
+        );
+        return updatedContext;
+      } else {
+        console.log(
+          `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] No existing context found for user:${userId}, creating new with thread summary...`
+        );
+
+        // Se não existe, cria um novo contexto básico com os dados do resumo da thread
+        const newContext = await this.create({
+          user_id: userId,
+          metadata: metadata || {},
+          output_base_prompt: {},
+        });
+
+        // Depois atualiza com o resumo da thread
+        const updatedContext = await this.updateWithThreadSummary(
+          userId,
+          threadSummary,
+          metadata
+        );
+
+        if (!updatedContext) {
+          throw new Error("Failed to update new context with thread summary");
+        }
+
+        console.log(
+          `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Successfully created and updated new context with thread summary for user:${userId}`
+        );
+        return updatedContext;
+      }
+    } catch (error) {
+      console.error(
+        `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Error occurred:`,
+        error
+      );
+      handleDatabaseError(
+        error,
+        "upsert user enhanced context with thread summary"
       );
       throw error;
     }

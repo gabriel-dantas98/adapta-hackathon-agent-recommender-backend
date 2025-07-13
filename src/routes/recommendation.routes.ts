@@ -41,26 +41,4 @@ export default async function recommendationRoutes(fastify: FastifyInstance) {
       reply.code(500).send({ error: error.message });
     }
   });
-
-  // Find similar products
-  fastify.get("/similar/:productId", async (request, reply) => {
-    try {
-      const { productId } = request.params as { productId: string };
-      const { limit = 5, similarity_threshold = 0.8 } = request.query as {
-        limit?: number;
-        similarity_threshold?: number;
-      };
-
-      const result = await recommendationService.findSimilarProducts(
-        productId,
-        limit,
-        similarity_threshold
-      );
-
-      reply.send(result);
-    } catch (error) {
-      fastify.log.error(error);
-      reply.code(500).send({ error: error.message });
-    }
-  });
 }

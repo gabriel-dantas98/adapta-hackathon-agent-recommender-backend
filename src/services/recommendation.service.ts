@@ -88,7 +88,7 @@ class RecommendationService {
         `[${new Date().toISOString()}] [RecommendationService.${methodName}] Searching for similar products`
       );
       // 4. Buscar produtos usando a coluna de embeddings dos produtos
-      const similarProducts = await solutionProductRepository.findWithOwnerInfo(
+      const recommendations = await solutionProductRepository.findWithOwnerInfo(
         userEnhancedContextEmbeddings,
         threadSummaryEmbedding,
         0.75,
@@ -98,26 +98,8 @@ class RecommendationService {
 
       console.log(
         `[${new Date().toISOString()}] [RecommendationService.${methodName}] Found ${
-          similarProducts.length
-        } similar products`
-      );
-
-      // 5. Mapear produtos para o formato de recomendação
-      const recommendations = similarProducts.map((product) => ({
-        product_id: product.product_id,
-        similarity_score: product.similarity_score,
-        metadata: product.metadata,
-        output_base_prompt: {}, // Produtos não têm output_base_prompt
-        owner_info: {
-          company_name: product.owner_info.company_name,
-          domain: product.owner_info.domain,
-        },
-      }));
-
-      console.log(
-        `[${new Date().toISOString()}] [RecommendationService.${methodName}] Mapped ${
           recommendations.length
-        } recommendations`
+        } similar products`
       );
 
       const result = {
@@ -216,106 +198,6 @@ class RecommendationService {
       throw new Error(`Failed to search products: ${String(error)}`);
     }
   }
-
-  /**
-   * Recomendações baseadas em produtos similares
-   */
-  async findSimilarProducts(
-    productId: string,
-    limit: number = 5,
-    similarity_threshold: number = 0.8
-  ): Promise<RecommendationListResponse> {
-    const methodName = "findSimilarProducts";
-    console.log(
-      `[${new Date().toISOString()}] [RecommendationService.${methodName}] Starting with productId: ${productId}, limit: ${limit}, threshold: ${similarity_threshold}`
-    );
-
-    try {
-      console.log(
-        `[${new Date().toISOString()}] [RecommendationService.${methodName}] Searching for reference product`
-      );
-      // Buscar o produto de referência
-      const referenceProduct = await solutionProductRepository.findByProductId(
-        productId
-      );
-
-      if (!referenceProduct) {
-        console.error(
-          `[${new Date().toISOString()}] [RecommendationService.${methodName}] Reference product not found: ${productId}`
-        );
-        throw new Error("Reference product not found");
-      }
-
-      console.log(
-        `[${new Date().toISOString()}] [RecommendationService.${methodName}] Found reference product: ${
-          referenceProduct.title
-        }`
-      );
-
-      // Usar embedding do produto de referência para ambos os parâmetros
-      const mockEmbedding = new Array(1536).fill(0);
-      console.log(
-        `[${new Date().toISOString()}] [RecommendationService.${methodName}] Using mock embedding for similar product search`
-      );
-
-      // Buscar produtos similares (usando mock embedding - precisa ser adaptado para usar o embedding real)
-      const similarProducts = await solutionProductRepository.findWithOwnerInfo(
-        mockEmbedding,
-        mockEmbedding,
-        0.5,
-        0.5,
-        limit + 1 // +1 para excluir o próprio produto
-      );
-
-      console.log(
-        `[${new Date().toISOString()}] [RecommendationService.${methodName}] Found ${
-          similarProducts.length
-        } similar products (including reference)`
-      );
-
-      // Remover o produto de referência dos resultados
-      const filteredProducts = similarProducts
-        .filter((product) => product.product_id !== productId)
-        .slice(0, limit);
-
-      console.log(
-        `[${new Date().toISOString()}] [RecommendationService.${methodName}] Filtered to ${
-          filteredProducts.length
-        } similar products (excluding reference)`
-      );
-
-      const recommendations = filteredProducts.map((product) => ({
-        product_id: product.product_id,
-        similarity_score: product.similarity_score,
-        metadata: product.metadata,
-        output_base_prompt: {},
-        owner_info: {
-          company_name: product.owner_info.company_name,
-          domain: product.owner_info.domain,
-        },
-      }));
-
-      const result = {
-        recommendations,
-        total: recommendations.length,
-        user_context_summary: `Products similar to ${
-          referenceProduct.metadata.name || productId
-        }`,
-      };
-
-      console.log(
-        `[${new Date().toISOString()}] [RecommendationService.${methodName}] Successfully found similar products`
-      );
-      return result;
-    } catch (error) {
-      console.error(
-        `[${new Date().toISOString()}] [RecommendationService.${methodName}] Error occurred:`,
-        error
-      );
-      throw new Error(`Failed to find similar products: ${String(error)}`);
-    }
-  }
-
   /**
    * Combina dois embeddings com pesos especificados
    */
