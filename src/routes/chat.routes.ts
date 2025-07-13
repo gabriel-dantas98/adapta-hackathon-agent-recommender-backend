@@ -50,9 +50,22 @@ export default async function chatRoutes(fastify: FastifyInstance) {
       console.log("userEnhancedContext", userEnhancedContext);
 
       // 4. Get all products embeddings by similarity using thread_summary_embedding + user_context_enhanced_embeddings
+      if (!userEnhancedContext) {
+        return reply.code(400).send({
+          error: "User enhanced context not found",
+        });
+      }
+
       const recommendations =
         await recommendationService.generateRecommendations({
-          userEnhancedContext,
+          userEnhancedContext: {
+            id: userEnhancedContext.id,
+            context_id: userEnhancedContext.context_id,
+            user_id: userEnhancedContext.user_id,
+            metadata: userEnhancedContext.metadata,
+            output_base_prompt: userEnhancedContext.output_base_prompt,
+            embeddings: userEnhancedContext.embeddings,
+          },
           threadSummary,
           limit: 10,
           similarity_threshold: 0.7,

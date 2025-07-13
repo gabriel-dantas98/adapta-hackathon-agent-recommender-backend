@@ -15,7 +15,7 @@ type UserEnhancedContextUpdate =
   Database["public"]["Tables"]["users_enhanced_context"]["Update"];
 
 export class UserEnhancedContextRepository {
-  private tableName = "users_enhanced_context";
+  private tableName = "users_enhanced_context" as const;
 
   async create(data: OnboardingInput): Promise<UserEnhancedContextResponse> {
     const methodName = "create";
@@ -44,7 +44,7 @@ export class UserEnhancedContextRepository {
 
       const insertData: UserEnhancedContextInsert = {
         ...data,
-        embeddings,
+        embeddings: JSON.stringify(embeddings),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -263,7 +263,7 @@ export class UserEnhancedContextRepository {
 
       const updateData: UserEnhancedContextUpdate = {
         ...data,
-        ...(embeddings && { embeddings }),
+        ...(embeddings && { embeddings: JSON.stringify(embeddings) }),
         updated_at: new Date().toISOString(),
       };
 
@@ -346,32 +346,30 @@ export class UserEnhancedContextRepository {
       );
 
       // Gera embeddings considerando o resumo da thread
-      const embeddings = await embeddingsService.generateUserContextEmbedding(
-        updatedMetadata,
-        current.output_base_prompt,
-        threadSummary
+      const { embedding, summary } =
+        await embeddingsService.generateUserContextEmbedding(
+          updatedMetadata,
+          current.output_base_prompt,
+          threadSummary
+        );
+
+      console.log(
+        `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Generated sucessfully user context summary: ${summary} with dimension: ${
+          embedding.length
+        }`
       );
 
       console.log(
         `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Embeddings generated successfully, dimension: ${
-          embeddings.length
+          embedding.length
         }`
       );
 
       const updateData: UserEnhancedContextUpdate = {
-        metadata: updatedMetadata,
-        embeddings,
+        ...current,
+        embeddings: JSON.stringify(embedding),
         updated_at: new Date().toISOString(),
       };
-
-      console.log(
-        `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Preparing to update with thread summary:`,
-        JSON.stringify(
-          { ...updateData, embeddings: `[${embeddings.length} dimensions]` },
-          null,
-          2
-        )
-      );
 
       const { data: result, error } = await supabase
         .from(this.tableName)
@@ -600,11 +598,11 @@ export class UserEnhancedContextRepository {
       id: row.id,
       user_id: row.user_id,
       context_id: row.context_id,
-      metadata: row.metadata,
-      output_base_prompt: row.output_base_prompt,
-      embeddings: row.embeddings,
-      created_at: row.created_at,
-      updated_at: row.updated_at,
+      metadata: row.metadata as Record<string, any>,
+      output_base_prompt: row.output_base_prompt as Record<string, any>,
+      embeddings: row.embeddings ? JSON.parse(row.embeddings) : null,
+      created_at: row.created_at || "",
+      updated_at: row.updated_at || "",
     };
   }
 }
