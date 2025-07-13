@@ -25,6 +25,7 @@ class ChatService {
     messageId: number;
     threadSummary: string;
     userContextUpdated: boolean;
+    intentScore?: number;
   }> {
     const methodName = "processMessage";
     console.log(
@@ -83,6 +84,29 @@ class ChatService {
           threadSummary.length
         } characters`
       );
+
+      // 3.3 Classificar intenção de compra
+      const intentClassification = await summaryService.classifyPurchaseIntent(
+        threadSummary, chatMessages
+      );
+      console.log(
+        `[${new Date().toISOString()}] [ChatService.${methodName}] Intent classification result: ${JSON.stringify(
+          intentClassification
+        )}`
+      );
+
+      // if intentClassification.score < 50, return early
+      if (intentClassification.score < 50) {
+        console.log(
+          `[${new Date().toISOString()}] [ChatService.${methodName}] Intent score is below threshold, skipping further processing`
+        );
+        return {
+          messageId: savedMessage.id,
+          threadSummary,
+          userContextUpdated: false,
+          intentScore: intentClassification.score,
+        };
+      }
 
       // 4. Gerar embedding da thread
       console.log(

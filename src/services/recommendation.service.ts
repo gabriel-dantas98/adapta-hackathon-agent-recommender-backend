@@ -191,6 +191,8 @@ class RecommendationService {
       throw new Error(`Failed to search products: ${String(error)}`);
     }
   }
+
+
   /**
    * Combina dois embeddings com pesos especificados
    */

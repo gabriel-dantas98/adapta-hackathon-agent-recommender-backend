@@ -43,6 +43,25 @@ export default async function chatRoutes(fastify: FastifyInstance) {
 
       console.log("userEnhancedContext", userEnhancedContext);
 
+      if (chatResult.intentScore && chatResult.intentScore < 50) {
+        console.log(
+          `[${new Date().toISOString()}] [chatRoutes] Intent score is low (${
+          chatResult.intentScore
+          }), skipping recommendations`
+        );
+
+        const response = await chatService.generateResponse(
+          chatResult.threadSummary,
+          userEnhancedContext
+        );
+
+        reply.send({
+          ...chatResult,
+          response: response.response,
+          context_summary: response.context_summary
+        });
+      }
+
       // 4. Get all products embeddings by similarity using thread_summary_embedding + user_context_enhanced_embeddings
       if (!userEnhancedContext) {
         return reply.code(400).send({
