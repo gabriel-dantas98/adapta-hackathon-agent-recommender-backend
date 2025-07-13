@@ -21,6 +21,8 @@ const envSchema = z.object({
 
   // Database
   DATABASE_URL: z.string().url().optional(),
+
+  FIRECRAWL_API_KEY: z.string(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -31,7 +33,7 @@ const parseEnv = (): Env => {
   if (!result.success) {
     console.error(
       "❌ Invalid environment variables:",
-      result.error.flatten().fieldErrors
+      result.error.flatten().fieldErrors,
     );
     throw new Error("Invalid environment variables");
   }

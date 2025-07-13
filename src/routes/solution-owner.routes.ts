@@ -5,6 +5,7 @@ import {
   CreateSolutionOwnerInput,
 } from "../types/dtos";
 import { solutionOwnerRepository } from "../repositories/solution-owner.repository";
+import { startCrawlProcess, waitForCrawlResult } from "@/lib/crawl";
 
 export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
   // Create solution owner
@@ -18,15 +19,26 @@ export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const result = await solutionOwnerRepository.create(
-          request.body as CreateSolutionOwnerInput
+          request.body as CreateSolutionOwnerInput,
         );
         reply.code(201).send(result);
       } catch (error) {
         fastify.log.error(error);
         reply.code(400).send({ error: (error as Error).message });
       }
-    }
+    },
   );
+
+  // Given a website url, crawl it and return the application title, summary and possible images.
+  fastify.post("/crawl", async (request, reply) => {
+    const { url } = request.body as { url: string };
+
+    const crawlId = await startCrawlProcess(url);
+    const crawlResult = await waitForCrawlResult(crawlId);
+    const pagesData = crawlResult.data;
+
+    reply.send(crawlResult);
+  });
 
   // Get all solution owners
   fastify.get(
@@ -73,7 +85,7 @@ export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
         fastify.log.error(error);
         reply.code(500).send({ error: error.message });
       }
-    }
+    },
   );
 
   // Get solution owner by ID
@@ -126,7 +138,7 @@ export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
         fastify.log.error(error);
         reply.code(500).send({ error: error.message });
       }
-    }
+    },
   );
 
   // Get solution owner by company ID
@@ -179,7 +191,7 @@ export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
         fastify.log.error(error);
         reply.code(500).send({ error: error.message });
       }
-    }
+    },
   );
 
   // Update solution owner
@@ -243,7 +255,7 @@ export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
         fastify.log.error(error);
         reply.code(500).send({ error: error.message });
       }
-    }
+    },
   );
 
   // Search solution owners by embedding
@@ -302,7 +314,7 @@ export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
         const result = await solutionOwnerRepository.searchByEmbedding(
           embedding,
           threshold,
-          limit
+          limit,
         );
 
         reply.send(result);
@@ -310,6 +322,6 @@ export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
         fastify.log.error(error);
         reply.code(500).send({ error: error.message });
       }
-    }
+    },
   );
 }
