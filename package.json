@@ -28,6 +28,7 @@
     "@langchain/core": "^0.1.52",
     "@langchain/openai": "^0.0.25",
     "@supabase/supabase-js": "^2.39.7",
+    "axios": "^1.10.0",
     "dotenv": "^17.2.0",
     "fastify": "^4.26.2",
     "fastify-type-provider-zod": "^1.1.9",

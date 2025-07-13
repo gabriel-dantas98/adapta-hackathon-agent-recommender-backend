@@ -5,6 +5,13 @@ import {
   CreateSolutionOwnerInput,
 } from "../types/dtos";
 import { solutionOwnerRepository } from "../repositories/solution-owner.repository";
+import {
+  startCrawlProcess,
+  summarySchema,
+  waitForCrawlResult,
+} from "@/lib/crawl";
+import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { openai } from "@/lib/openai";
 
 export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
   // Create solution owner
@@ -18,15 +25,37 @@ export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const result = await solutionOwnerRepository.create(
-          request.body as CreateSolutionOwnerInput
+          request.body as CreateSolutionOwnerInput,
         );
         reply.code(201).send(result);
       } catch (error) {
         fastify.log.error(error);
         reply.code(400).send({ error: (error as Error).message });
       }
-    }
+    },
   );
+
+  // Given a website url, crawl it and return the application title, summary and possible images.
+  fastify.post("/crawl", async (request, reply) => {
+    const { url } = request.body as { url: string };
+
+    const crawlId = await startCrawlProcess(url);
+    const crawlResult = await waitForCrawlResult(crawlId);
+    const pagesData = crawlResult.data;
+
+    const structuredModel = openai.withStructuredOutput(summarySchema);
+
+    const LLMResponse = await structuredModel.invoke([
+      new SystemMessage({
+        content:
+          "Create a summary of the scraping content below. Focus on detecting the core of the business, and it solutions. Get only the images that represent the business logo, especially the favicon. From the favicon, extract the primary color and the secondary color from the ",
+      }),
+      new HumanMessage({
+        content: JSON.stringify(pagesData),
+      }),
+    ]);
+    reply.send(LLMResponse);
+  });
 
   // Get all solution owners
   fastify.get(
@@ -73,7 +102,7 @@ export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
         fastify.log.error(error);
         reply.code(500).send({ error: error.message });
       }
-    }
+    },
   );
 
   // Get solution owner by ID
@@ -126,7 +155,7 @@ export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
         fastify.log.error(error);
         reply.code(500).send({ error: error.message });
       }
-    }
+    },
   );
 
   // Get solution owner by company ID
@@ -179,7 +208,7 @@ export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
         fastify.log.error(error);
         reply.code(500).send({ error: error.message });
       }
-    }
+    },
   );
 
   // Update solution owner
@@ -243,7 +272,7 @@ export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
         fastify.log.error(error);
         reply.code(500).send({ error: error.message });
       }
-    }
+    },
   );
 
   // Search solution owners by embedding
@@ -302,7 +331,7 @@ export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
         const result = await solutionOwnerRepository.searchByEmbedding(
           embedding,
           threshold,
-          limit
+          limit,
         );
 
         reply.send(result);
@@ -310,6 +339,6 @@ export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
         fastify.log.error(error);
         reply.code(500).send({ error: error.message });
       }
-    }
+    },
   );
 }
