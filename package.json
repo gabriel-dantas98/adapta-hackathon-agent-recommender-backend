@@ -1,7 +1,7 @@
 {
-  "name": "adapta-hackathon-agent-recommender-backend",
+  "name": "conversity-ai-rag-agent-backend",
   "version": "1.0.0",
-  "description": "API para recomendação de produtos usando embeddings e similaridade",
+  "description": "RAG Agent API for intelligent product recommendations during AI interactions",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

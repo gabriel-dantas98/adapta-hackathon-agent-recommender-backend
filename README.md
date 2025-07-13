@@ -1,7 +1,7 @@
 # Conversity.AI - RAG Agent Recommender API
 
 <p align="center">
-  <img src="assets/conversity-ai.jpeg" width="500">
+  <img src="assets/conversity-ai.jpeg">
   <p align="center">
   The world has changed. Attention is shifting away from Google and social media towards AI interactions for thinking, deciding, searching, and BUYING. We're redefining advertising by connecting solutions to people at the ideal moment during their AI interactions.
   </p>
@@ -27,7 +27,7 @@ This API powers an intelligent recommendation engine that:
 4. **Provides personalized recommendations** at the perfect moment
 5. **Learns from interactions** to improve over time
 
-## ✅ System Status: Production Ready (95%)
+## ✅ System Status: Production Ready
 
 ### 🚀 Implemented Features
 - ✅ **Solution Owners** - Company profiles with automatic embeddings
@@ -130,6 +130,7 @@ src/
 - **Real-time**: Sub-200ms response times for recommendations
 
 ### 4. Continuous Learning
+
 - **Context Updates**: Enhanced user profiles from conversations
 - **Intent Tracking**: Purchase intent scoring (0-100)
 - **Feedback Loop**: Recommendation relevance optimization

@@ -38,9 +38,9 @@ async function registerPlugins() {
   await fastify.register(swagger, {
     openapi: {
       info: {
-        title: "Adapta Hackathon Agent Recommender API",
+        title: "Conversity.AI RAG Agent API",
         description:
-          "API para recomendação de produtos usando embeddings e similaridade",
+          "RAG Agent API for intelligent product recommendations during AI interactions",
         version: "1.0.0",
       },
       servers: [
