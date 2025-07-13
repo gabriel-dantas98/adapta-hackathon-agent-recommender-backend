@@ -336,10 +336,9 @@ export class UserEnhancedContextRepository {
         console.log(
           `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] User enhanced context not found for user:${userId}`
         );
-        return null;
       }
 
-      const updatedMetadata = metadata || current.metadata;
+      const updatedMetadata = metadata || current?.metadata || {};
 
       console.log(
         `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Generating embeddings with thread summary`
@@ -349,12 +348,12 @@ export class UserEnhancedContextRepository {
       const { embedding, summary } =
         await embeddingsService.generateUserContextEmbedding(
           updatedMetadata,
-          current.output_base_prompt,
+          current?.output_base_prompt || {},
           threadSummary
         );
 
       console.log(
-        `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Generated sucessfully user context summary: ${summary} with dimension: ${
+        `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Generated successfully user context summary: ${summary} with dimension: ${
           embedding.length
         }`
       );
