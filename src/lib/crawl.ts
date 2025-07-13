@@ -6,6 +6,7 @@ export const summarySchema = z.object({
   title: z.string(),
   summary: z.string(),
   images: z.array(z.string()),
+  metadata: z.object({}),
   primaryColor: z.string(),
   secondaryColor: z.string(),
 });

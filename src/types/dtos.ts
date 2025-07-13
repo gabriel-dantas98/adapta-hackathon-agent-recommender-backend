@@ -28,7 +28,6 @@ export const SolutionOwnerResponseDto = z.object({
 
 // Solution Owner Products DTOs
 export const CreateSolutionProductDto = z.object({
-  product_id: z.string(),
   owner_id: z.string(),
   metadata: z.record(z.any()),
   title: z.string(),
@@ -36,8 +35,6 @@ export const CreateSolutionProductDto = z.object({
   description: z.string(),
   url: z.string(),
   image_url: z.string(),
-  created_at: z.string(),
-  updated_at: z.string(),
 });
 
 //

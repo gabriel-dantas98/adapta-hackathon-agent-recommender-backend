@@ -48,7 +48,7 @@ export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
     const LLMResponse = await structuredModel.invoke([
       new SystemMessage({
         content:
-          "Create a summary of the scraping content below. Focus on detecting the core of the business, and it solutions. Get only the images that represent the business logo, especially the favicon. From the favicon, extract the primary color and the secondary color from the ",
+          "Create a summary of the scraping content below. Focus on detecting the core of the business, and it solutions. Get only the images that represent the business logo, especially the favicon. From the favicon, extract the primary color and the secondary color. Inserts keywords from the website in the metadata object. ",
       }),
       new HumanMessage({
         content: JSON.stringify(pagesData),
