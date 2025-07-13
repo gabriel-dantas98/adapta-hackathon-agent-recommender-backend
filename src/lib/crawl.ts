@@ -1,5 +1,14 @@
 import env from "@/config/env";
 import axios from "axios";
+import z from "zod";
+
+export const summarySchema = z.object({
+  title: z.string(),
+  summary: z.string(),
+  images: z.array(z.string()),
+  primaryColor: z.string(),
+  secondaryColor: z.string(),
+});
 
 /* Given a URL, it starts a new crawl process and returns its ID. */
 export async function startCrawlProcess(url: string) {

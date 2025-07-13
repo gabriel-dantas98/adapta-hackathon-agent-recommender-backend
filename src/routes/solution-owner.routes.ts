@@ -5,7 +5,13 @@ import {
   CreateSolutionOwnerInput,
 } from "../types/dtos";
 import { solutionOwnerRepository } from "../repositories/solution-owner.repository";
-import { startCrawlProcess, waitForCrawlResult } from "@/lib/crawl";
+import {
+  startCrawlProcess,
+  summarySchema,
+  waitForCrawlResult,
+} from "@/lib/crawl";
+import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { openai } from "@/lib/openai";
 
 export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
   // Create solution owner
@@ -37,7 +43,18 @@ export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
     const crawlResult = await waitForCrawlResult(crawlId);
     const pagesData = crawlResult.data;
 
-    reply.send(crawlResult);
+    const structuredModel = openai.withStructuredOutput(summarySchema);
+
+    const LLMResponse = await structuredModel.invoke([
+      new SystemMessage({
+        content:
+          "Create a summary of the scraping content below. Focus on detecting the core of the business, and it solutions. Get only the images that represent the business logo, especially the favicon. From the favicon, extract the primary color and the secondary color from the ",
+      }),
+      new HumanMessage({
+        content: JSON.stringify(pagesData),
+      }),
+    ]);
+    reply.send(LLMResponse);
   });
 
   // Get all solution owners
