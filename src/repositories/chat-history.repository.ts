@@ -12,8 +12,7 @@ export class ChatHistoryRepository {
   async create(data: ChatMessage): Promise<ChatHistoryResponse> {
     const methodName = "create";
     console.log(
-      `[${new Date().toISOString()}] [ChatHistoryRepository.${methodName}] Starting with data:`,
-      JSON.stringify(data, null, 2)
+      `[${new Date().toISOString()}] [ChatHistoryRepository.${methodName}]`
     );
 
     try {
@@ -24,8 +23,7 @@ export class ChatHistoryRepository {
       };
 
       console.log(
-        `[${new Date().toISOString()}] [ChatHistoryRepository.${methodName}] Preparing to insert:`,
-        JSON.stringify(insertData, null, 2)
+        `[${new Date().toISOString()}] [ChatHistoryRepository.${methodName}] Preparing to insert...`
       );
 
       const { data: result, error } = await supabase

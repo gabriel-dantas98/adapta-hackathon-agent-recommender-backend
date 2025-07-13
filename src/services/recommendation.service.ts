@@ -17,8 +17,7 @@ class RecommendationService {
   ): Promise<RecommendationListResponse> {
     const methodName = "generateRecommendations";
     console.log(
-      `[${new Date().toISOString()}] [RecommendationService.${methodName}] Starting with request:`,
-      JSON.stringify(request, null, 2)
+      `[${new Date().toISOString()}] [RecommendationService.${methodName}] Starting with request...`
     );
 
     try {

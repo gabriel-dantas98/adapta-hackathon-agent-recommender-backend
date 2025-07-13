@@ -484,9 +484,29 @@ export class SolutionProductRepository {
         throw error;
       }
 
-      // append solutions_owner to the data
+      // Extract unique owner IDs
+      const ownerIds = [
+        ...new Set(data.map((row: any) => row.owner_id).filter((id) => id)),
+      ];
+
+      // Fetch all owners at once using Promise.all
+      const ownerPromises = ownerIds.map((id) =>
+        solutionOwnerRepository.findById(id)
+      );
+
+      const owners = await Promise.all(ownerPromises);
+
+      // Create a map of owner_id to owner data
+      const ownersMap = owners.reduce((acc, owner) => {
+        if (owner) {
+          acc[owner.id] = owner;
+        }
+        return acc;
+      }, {} as Record<string, any>);
+
+      // Append solutions_owner to the data
       const products_with_metadata = data.map((row: any) => ({
-        solutions_owner: this.findById(row.owner_id ?? ""),
+        solutions_owner: ownersMap[row.owner_id] || null,
         ...row,
       }));
 

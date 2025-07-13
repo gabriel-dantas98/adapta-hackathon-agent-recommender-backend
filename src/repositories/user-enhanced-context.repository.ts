@@ -93,8 +93,7 @@ export class UserEnhancedContextRepository {
   async upsert(data: OnboardingInput): Promise<UserEnhancedContextResponse> {
     const methodName = "upsert";
     console.log(
-      `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Starting with data:`,
-      JSON.stringify(data, null, 2)
+      `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Starting with data:`
     );
 
     try {
@@ -286,8 +285,7 @@ export class UserEnhancedContextRepository {
   ): Promise<UserEnhancedContextResponse | null> {
     const methodName = "update";
     console.log(
-      `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Starting with id:${id}, data:`,
-      JSON.stringify(data, null, 2)
+      `[${new Date().toISOString()}] [UserEnhancedContextRepository.${methodName}] Starting with id:${id}, data:`
     );
 
     try {

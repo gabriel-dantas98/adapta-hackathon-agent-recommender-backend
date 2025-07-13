@@ -19,8 +19,7 @@ export class SolutionOwnerRepository {
   async create(data: CreateSolutionOwnerInput): Promise<SolutionOwnerResponse> {
     const methodName = "create";
     console.log(
-      `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Starting with data:`,
-      JSON.stringify(data, null, 2)
+      `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Starting with data:`
     );
 
     try {
@@ -58,12 +57,7 @@ export class SolutionOwnerRepository {
       };
 
       console.log(
-        `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Preparing to insert:`,
-        JSON.stringify(
-          { ...insertData, embeddings: `[${embeddings.length} dimensions]` },
-          null,
-          2
-        )
+        `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Preparing to insert:`
       );
 
       const { data: result, error } = await supabase
@@ -228,8 +222,7 @@ export class SolutionOwnerRepository {
   ): Promise<SolutionOwnerResponse | null> {
     const methodName = "update";
     console.log(
-      `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Starting with id:${id}, data:`,
-      JSON.stringify(data, null, 2)
+      `[${new Date().toISOString()}] [SolutionOwnerRepository.${methodName}] Starting with id:${id}, data:`
     );
 
     try {
@@ -286,9 +279,6 @@ export class SolutionOwnerRepository {
         JSON.stringify(
           {
             ...updateData,
-            embeddings: embeddings
-              ? `[${embeddings.length} dimensions]`
-              : undefined,
           },
           null,
           2
