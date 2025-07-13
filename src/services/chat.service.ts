@@ -1,8 +1,16 @@
+import { ChatOpenAI } from "@langchain/openai";
+import { PromptTemplate } from "@langchain/core/prompts";
+import { StringOutputParser } from "@langchain/core/output_parsers";
 import { embeddingsService } from "./embeddings.service";
 import { summaryService } from "./summary.service";
 import { chatHistoryRepository } from "../repositories/chat-history.repository";
 import { userEnhancedContextRepository } from "../repositories/user-enhanced-context.repository";
 import { ChatMessage } from "../types/dtos";
+import { env } from "../config/env";
+import {
+  RecommendationListResponse,
+  UserEnhancedContextResponse,
+} from "../types/dtos";
 
 class ChatService {
   /**
@@ -22,6 +30,7 @@ class ChatService {
       const chatMessage: ChatMessage = {
         session_id: sessionId,
         message: message,
+        user_id: userId,
       };
 
       const savedMessage = await chatHistoryRepository.create(chatMessage);
@@ -70,7 +79,11 @@ class ChatService {
       };
     } catch (error) {
       console.error("Error processing message:", error);
-      throw new Error(`Failed to process message: ${error.message}`);
+      throw new Error(
+        `Failed to process message: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   }
 
@@ -300,6 +313,112 @@ class ChatService {
         `Failed to analyze conversation patterns: ${error.message}`
       );
     }
+  }
+
+  /**
+   * Gera resposta do chat com base no contexto e recomendações
+   */
+  async generateResponse(
+    threadSummary: string,
+    userContext: UserEnhancedContextResponse | null,
+    recommendations?: RecommendationListResponse
+  ): Promise<{
+    response: string;
+    recommendations_used: number;
+    context_summary: string;
+  }> {
+    try {
+      const llm = new ChatOpenAI({
+        openAIApiKey: env.OPENAI_API_KEY,
+        modelName: "o3-2025-04-16",
+        temperature: 1,
+      });
+
+      const outputParser = new StringOutputParser();
+
+      // Criar prompt para geração de resposta
+      const prompt = this.createChatResponsePrompt();
+
+      // Preparar contexto do usuário
+      const userContextText = userContext
+        ? `Metadata: ${JSON.stringify(
+            userContext.metadata
+          )}\nOutput Base Prompt: ${JSON.stringify(
+            userContext.output_base_prompt
+          )}`
+        : "Nenhum contexto de usuário disponível";
+
+      // Preparar recomendações
+      const recommendationsText = recommendations?.recommendations
+        .map(
+          (rec, index) =>
+            `${index + 1}. ${rec.metadata.title || rec.product_id}
+   - Empresa: ${rec.owner_info.company_name}
+   - Descrição: ${rec.metadata.description || "Sem descrição"}
+   - Similaridade: ${(rec.similarity_score * 100).toFixed(1)}%
+   - URL: ${rec.metadata.url || "Não informado"}`
+        )
+        .join("\n\n");
+
+      const input = {
+        thread_summary: threadSummary,
+        user_context: userContextText,
+        recommendations: recommendationsText,
+        recommendations_count: recommendations?.recommendations.length,
+        user_context_summary:
+          recommendations?.user_context_summary || "Sem resumo disponível",
+      };
+
+      const chain = prompt.pipe(llm).pipe(outputParser);
+      const response = await chain.invoke(input);
+
+      return {
+        response: response.trim(),
+        recommendations_used: recommendations?.recommendations.length || 0,
+        context_summary: recommendations?.user_context_summary || threadSummary,
+      };
+    } catch (error) {
+      console.error("Error generating chat response:", error);
+      throw new Error(
+        `Failed to generate chat response: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
+  }
+
+  /**
+   * Cria prompt para resposta do chat
+   */
+  private createChatResponsePrompt(): PromptTemplate {
+    const template = `
+Você é um assistente especializado em recomendações de produtos e soluções. Sua tarefa é gerar uma resposta útil e personalizada com base no contexto da conversa e nas recomendações disponíveis.
+
+RESUMO DA CONVERSA:
+{thread_summary}
+
+CONTEXTO DO USUÁRIO:
+{user_context}
+
+RESUMO DO CONTEXTO PARA RECOMENDAÇÕES:
+{user_context_summary}
+
+RECOMENDAÇÕES DISPONÍVEIS ({recommendations_count} produtos):
+{recommendations}
+
+INSTRUÇÕES:
+1. Analise o contexto da conversa e as necessidades do usuário
+2. Apresente as recomendações de forma natural e contextualizada
+3. Explique por que cada recomendação é relevante para o usuário
+4. Use linguagem conversacional e amigável
+5. Organize as recomendações por relevância
+6. Inclua informações práticas como URLs quando disponíveis
+7. Se não houver recomendações relevantes, explique o motivo e sugira alternativas
+8. Mantenha o foco em ajudar o usuário a encontrar as melhores soluções
+
+RESPOSTA:`;
+
+    return PromptTemplate.fromTemplate(template);
   }
 
   /**

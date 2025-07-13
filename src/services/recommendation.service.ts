@@ -77,7 +77,7 @@ class RecommendationService {
         throw new Error("No embeddings available for recommendation");
       }
 
-      // 4. Buscar produtos similares
+      // 4. Buscar produtos usando a colunha de embeddings dos produtos
       const similarProducts = await solutionProductRepository.findWithOwnerInfo(
         searchEmbedding,
         similarity_threshold,

@@ -1,281 +1,215 @@
 import { FastifyInstance } from "fastify";
 import { ChatMessageDto } from "../types/dtos";
 import { chatService } from "../services/chat.service";
+import { recommendationService } from "../services/recommendation.service";
+import { userEnhancedContextRepository } from "../repositories/user-enhanced-context.repository";
+import { chatHistoryRepository } from "../repositories/chat-history.repository";
+import { embeddingsService } from "../services/embeddings.service";
+import { summaryService } from "../services/summary.service";
 
 export default async function chatRoutes(fastify: FastifyInstance) {
-  // Send message and process
-  fastify.post(
-    "/message",
-    {
-      schema: {
-        body: {
-          type: "object",
-          properties: {
-            session_id: { type: "string" },
-            message: { type: "object" },
-            user_id: { type: "string" },
-          },
-          required: ["session_id", "message"],
-        },
-        response: {
-          200: {
-            type: "object",
-            properties: {
-              message_id: { type: "number" },
-              thread_summary: { type: "string" },
-              user_context_updated: { type: "boolean" },
-            },
-          },
-        },
-      },
-    },
-    async (request, reply) => {
-      try {
-        const { session_id, message, user_id } = request.body as {
-          session_id: string;
-          message: Record<string, any>;
-          user_id?: string;
-        };
+  // Send message and process with recommendations
+  fastify.post("/messages", async (request, reply) => {
+    try {
+      const { session_id, message, user_id } = request.body as {
+        session_id: string;
+        message: Record<string, any>;
+        user_id: string;
+      };
 
-        const result = await chatService.processMessage(
-          session_id,
-          message,
-          user_id
+      // 1. Process the message first
+      message.user_id = user_id;
+      const chatResult = await chatService.processMessage(
+        session_id,
+        message,
+        user_id
+      );
+
+      // 2. Refresh user_context_enhanced embeddings
+      const userContext = await userEnhancedContextRepository.findByUserId(
+        user_id
+      );
+      console.log(
+        `USER_ID: ${user_id} USER_CONTEXT: ${JSON.stringify(userContext)}`
+      );
+
+      if (userContext) {
+        await userEnhancedContextRepository.updateWithThreadSummary(
+          user_id,
+          chatResult.threadSummary
         );
-
-        reply.send(result);
-      } catch (error) {
-        fastify.log.error(error);
-        reply.code(400).send({ error: error.message });
       }
+
+      // 3. Refresh thread context embeddings
+      const recentMessages = await chatHistoryRepository.findRecentBySessionId(
+        session_id,
+        10
+      );
+
+      let threadEmbedding: number[] | null = null;
+      if (recentMessages.length > 0) {
+        const chatMessages = recentMessages.map((msg) => ({
+          role: msg.message.role || "user",
+          content: msg.message.content || JSON.stringify(msg.message),
+        }));
+
+        threadEmbedding = await embeddingsService.generateThreadEmbedding(
+          chatMessages,
+          chatResult.threadSummary
+        );
+      }
+
+      // 4. Get all products by similarity using thread context and user_context_enhanced embeddings
+      // const recommendations =
+      //   await recommendationService.generateRecommendations({
+      //     user_id,
+      //     session_id,
+      //     limit: 10,
+      //     similarity_threshold: 0.7,
+      //   });
+
+      // generate response with custom system prompt, message and user_context_enhanced, thread_summary and recommendations products
+
+      const response = await chatService.generateResponse(
+        chatResult.threadSummary,
+        userContext
+        // recommendations
+      );
+
+      reply.send({
+        ...chatResult,
+        response: response.response,
+        recommendations_used: response.recommendations_used,
+        context_summary: response.context_summary,
+        // recommendations: recommendations.recommendations,
+        threadEmbedding: threadEmbedding ? threadEmbedding.slice(0, 5) : null, // Only send first 5 dimensions for debugging
+      });
+    } catch (error) {
+      fastify.log.error(error);
+      reply.code(400).send({
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      });
     }
-  );
+  });
+
+  // Send message and process (original endpoint)
+  fastify.post("/message", async (request, reply) => {
+    try {
+      const { session_id, message, user_id } = request.body as {
+        session_id: string;
+        message: Record<string, any>;
+        user_id: string;
+      };
+
+      // we need to get all messages from the session
+      // add user_id to the message
+      message.user_id = user_id;
+
+      const result = await chatService.processMessage(
+        session_id,
+        message,
+        user_id
+      );
+
+      reply.send(result);
+    } catch (error) {
+      fastify.log.error(error);
+      reply.code(400).send({
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      });
+    }
+  });
 
   // Get thread history
-  fastify.get(
-    "/history/:sessionId",
-    {
-      schema: {
-        params: {
-          type: "object",
-          properties: {
-            sessionId: { type: "string" },
-          },
-          required: ["sessionId"],
-        },
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "number", default: 50 },
-            offset: { type: "number", default: 0 },
-          },
-        },
-        response: {
-          200: {
-            type: "object",
-            properties: {
-              messages: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    id: { type: "number" },
-                    message: { type: "object" },
-                    timestamp: { type: "string" },
-                  },
-                },
-              },
-              total: { type: "number" },
-              summary: { type: "string" },
-            },
-          },
-        },
-      },
-    },
-    async (request, reply) => {
-      try {
-        const { sessionId } = request.params as { sessionId: string };
-        const { limit = 50, offset = 0 } = request.query as {
-          limit?: number;
-          offset?: number;
-        };
+  fastify.get("/history/:sessionId", async (request, reply) => {
+    try {
+      const { sessionId } = request.params as { sessionId: string };
+      const { limit = 50, offset = 0 } = request.query as {
+        limit?: number;
+        offset?: number;
+      };
 
-        const result = await chatService.getThreadHistory(
-          sessionId,
-          limit,
-          offset
-        );
+      const result = await chatService.getThreadHistory(
+        sessionId,
+        limit,
+        offset
+      );
 
-        reply.send(result);
-      } catch (error) {
-        fastify.log.error(error);
-        reply.code(500).send({ error: error.message });
-      }
+      reply.send(result);
+    } catch (error) {
+      fastify.log.error(error);
+      reply.code(500).send({
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      });
     }
-  );
+  });
 
   // Get user threads
-  fastify.get(
-    "/threads/:userId",
-    {
-      schema: {
-        params: {
-          type: "object",
-          properties: {
-            userId: { type: "string" },
-          },
-          required: ["userId"],
-        },
-        querystring: {
-          type: "object",
-          properties: {
-            days_back: { type: "number", default: 30 },
-          },
-        },
-        response: {
-          200: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                session_id: { type: "string" },
-                message_count: { type: "number" },
-                last_activity: { type: "string" },
-                summary: { type: "string" },
-              },
-            },
-          },
-        },
-      },
-    },
-    async (request, reply) => {
-      try {
-        const { userId } = request.params as { userId: string };
-        const { days_back = 30 } = request.query as { days_back?: number };
+  fastify.get("/threads/:userId", async (request, reply) => {
+    try {
+      const { userId } = request.params as { userId: string };
+      const { days_back = 30 } = request.query as { days_back?: number };
 
-        const result = await chatService.getUserThreads(userId, days_back);
+      const result = await chatService.getUserThreads(userId, days_back);
 
-        reply.send(result);
-      } catch (error) {
-        fastify.log.error(error);
-        reply.code(500).send({ error: error.message });
-      }
+      reply.send(result);
+    } catch (error) {
+      fastify.log.error(error);
+      reply.code(500).send({
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      });
     }
-  );
+  });
 
   // Search messages
-  fastify.post(
-    "/search",
-    {
-      schema: {
-        body: {
-          type: "object",
-          properties: {
-            query: { type: "string" },
-            session_id: { type: "string" },
-            limit: { type: "number", default: 20 },
-          },
-          required: ["query"],
-        },
-        response: {
-          200: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                id: { type: "number" },
-                session_id: { type: "string" },
-                message: { type: "object" },
-                relevance_score: { type: "number" },
-              },
-            },
-          },
-        },
-      },
-    },
-    async (request, reply) => {
-      try {
-        const {
-          query,
-          session_id,
-          limit = 20,
-        } = request.body as {
-          query: string;
-          session_id?: string;
-          limit?: number;
-        };
+  fastify.post("/search", async (request, reply) => {
+    try {
+      const {
+        query,
+        session_id,
+        limit = 20,
+      } = request.body as {
+        query: string;
+        session_id?: string;
+        limit?: number;
+      };
 
-        const result = await chatService.searchMessages(
-          query,
-          session_id,
-          limit
-        );
+      const result = await chatService.searchMessages(query, session_id, limit);
 
-        reply.send(result);
-      } catch (error) {
-        fastify.log.error(error);
-        reply.code(500).send({ error: error.message });
-      }
+      reply.send(result);
+    } catch (error) {
+      fastify.log.error(error);
+      reply.code(500).send({
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      });
     }
-  );
+  });
 
   // Analyze conversation patterns
-  fastify.get(
-    "/patterns/:userId",
-    {
-      schema: {
-        params: {
-          type: "object",
-          properties: {
-            userId: { type: "string" },
-          },
-          required: ["userId"],
-        },
-        querystring: {
-          type: "object",
-          properties: {
-            days_back: { type: "number", default: 30 },
-          },
-        },
-        response: {
-          200: {
-            type: "object",
-            properties: {
-              total_messages: { type: "number" },
-              active_sessions: { type: "number" },
-              avg_messages_per_session: { type: "number" },
-              common_topics: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    topic: { type: "string" },
-                    frequency: { type: "number" },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-    async (request, reply) => {
-      try {
-        const { userId } = request.params as { userId: string };
-        const { days_back = 30 } = request.query as { days_back?: number };
+  fastify.get("/patterns/:userId", async (request, reply) => {
+    try {
+      const { userId } = request.params as { userId: string };
+      const { days_back = 30 } = request.query as { days_back?: number };
 
-        const result = await chatService.analyzeConversationPatterns(
-          userId,
-          days_back
-        );
+      const result = await chatService.analyzeConversationPatterns(
+        userId,
+        days_back
+      );
 
-        reply.send(result);
-      } catch (error) {
-        fastify.log.error(error);
-        reply.code(500).send({ error: error.message });
-      }
+      reply.send(result);
+    } catch (error) {
+      fastify.log.error(error);
+      reply.code(500).send({
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      });
     }
-  );
+  });
 
   // Clean up old messages
   fastify.delete(
@@ -307,7 +241,10 @@ export default async function chatRoutes(fastify: FastifyInstance) {
         reply.send({ deleted_count: deletedCount });
       } catch (error) {
         fastify.log.error(error);
-        reply.code(500).send({ error: error.message });
+        reply.code(500).send({
+          error:
+            error instanceof Error ? error.message : "Unknown error occurred",
+        });
       }
     }
   );
@@ -361,7 +298,10 @@ export default async function chatRoutes(fastify: FastifyInstance) {
         reply.send(result);
       } catch (error) {
         fastify.log.error(error);
-        reply.code(500).send({ error: error.message });
+        reply.code(500).send({
+          error:
+            error instanceof Error ? error.message : "Unknown error occurred",
+        });
       }
     }
   );
@@ -400,7 +340,10 @@ export default async function chatRoutes(fastify: FastifyInstance) {
         reply.send({ count });
       } catch (error) {
         fastify.log.error(error);
-        reply.code(500).send({ error: error.message });
+        reply.code(500).send({
+          error:
+            error instanceof Error ? error.message : "Unknown error occurred",
+        });
       }
     }
   );

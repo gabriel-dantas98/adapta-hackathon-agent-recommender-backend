@@ -1,41 +1,59 @@
 import { FastifyInstance } from "fastify";
 import { OnboardingDto, UpdateUserContextDto } from "../types/dtos";
 import { userEnhancedContextRepository } from "../repositories/user-enhanced-context.repository";
+import { supabase } from "../config/database";
 
 export default async function userRoutes(fastify: FastifyInstance) {
-  // User onboarding - create enhanced context
-  fastify.post(
-    "/onboarding",
-    {
-      schema: {
-        response: {
-          201: {
-            type: "object",
-            properties: {
-              id: { type: "string" },
-              context_id: { type: "string" },
-              user_id: { type: "string" },
-              metadata: { type: "object" },
-              output_base_prompt: { type: "object" },
-              created_at: { type: "string" },
-              updated_at: { type: "string" },
-            },
-          },
-        },
-      },
-    },
-    async (request, reply) => {
-      try {
-        const data = OnboardingDto.parse(request.body);
-        const result = await userEnhancedContextRepository.create(data);
+  // Create user profile (simple endpoint for testing)
+  fastify.post("/profile", async (request, reply) => {
+    try {
+      const { user_id, email, profile_metadata } = request.body as {
+        user_id: string;
+        email: string;
+        profile_metadata?: Record<string, any>;
+      };
 
-        reply.code(201).send(result);
-      } catch (error) {
-        fastify.log.error(error);
-        reply.code(400).send({ error: error.message });
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .insert({
+          user_id,
+          email,
+          profile_metadata,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select("*")
+        .single();
+
+      if (error) {
+        throw error;
       }
+
+      reply.code(201).send(data);
+    } catch (error) {
+      fastify.log.error(error);
+      reply.code(400).send({
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      });
     }
-  );
+  });
+
+  // User onboarding - create enhanced context
+  fastify.post("/onboarding", async (request, reply) => {
+    try {
+      const data = OnboardingDto.parse(request.body);
+      const result = await userEnhancedContextRepository.create(data);
+
+      reply.code(201).send(result);
+    } catch (error) {
+      fastify.log.error(error);
+      reply.code(400).send({
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      });
+    }
+  });
 
   // Get user context
   fastify.get(
@@ -48,26 +66,6 @@ export default async function userRoutes(fastify: FastifyInstance) {
             userId: { type: "string" },
           },
           required: ["userId"],
-        },
-        response: {
-          200: {
-            type: "object",
-            properties: {
-              id: { type: "string" },
-              context_id: { type: "string" },
-              user_id: { type: "string" },
-              metadata: { type: "object" },
-              output_base_prompt: { type: "object" },
-              created_at: { type: "string" },
-              updated_at: { type: "string" },
-            },
-          },
-          404: {
-            type: "object",
-            properties: {
-              error: { type: "string" },
-            },
-          },
         },
       },
     },
@@ -84,7 +82,10 @@ export default async function userRoutes(fastify: FastifyInstance) {
         reply.send(result);
       } catch (error) {
         fastify.log.error(error);
-        reply.code(500).send({ error: error.message });
+        reply.code(500).send({
+          error:
+            error instanceof Error ? error.message : "Unknown error occurred",
+        });
       }
     }
   );
@@ -100,27 +101,6 @@ export default async function userRoutes(fastify: FastifyInstance) {
             userId: { type: "string" },
           },
           required: ["userId"],
-        },
-
-        response: {
-          200: {
-            type: "object",
-            properties: {
-              id: { type: "string" },
-              context_id: { type: "string" },
-              user_id: { type: "string" },
-              metadata: { type: "object" },
-              output_base_prompt: { type: "object" },
-              created_at: { type: "string" },
-              updated_at: { type: "string" },
-            },
-          },
-          404: {
-            type: "object",
-            properties: {
-              error: { type: "string" },
-            },
-          },
         },
       },
     },
@@ -138,7 +118,10 @@ export default async function userRoutes(fastify: FastifyInstance) {
         reply.send(result);
       } catch (error) {
         fastify.log.error(error);
-        reply.code(400).send({ error: error.message });
+        reply.code(400).send({
+          error:
+            error instanceof Error ? error.message : "Unknown error occurred",
+        });
       }
     }
   );
@@ -162,26 +145,6 @@ export default async function userRoutes(fastify: FastifyInstance) {
             metadata: { type: "object" },
           },
           required: ["thread_summary"],
-        },
-        response: {
-          200: {
-            type: "object",
-            properties: {
-              id: { type: "string" },
-              context_id: { type: "string" },
-              user_id: { type: "string" },
-              metadata: { type: "object" },
-              output_base_prompt: { type: "object" },
-              created_at: { type: "string" },
-              updated_at: { type: "string" },
-            },
-          },
-          404: {
-            type: "object",
-            properties: {
-              error: { type: "string" },
-            },
-          },
         },
       },
     },
@@ -208,7 +171,10 @@ export default async function userRoutes(fastify: FastifyInstance) {
         reply.send(result);
       } catch (error) {
         fastify.log.error(error);
-        reply.code(400).send({ error: error.message });
+        reply.code(400).send({
+          error:
+            error instanceof Error ? error.message : "Unknown error occurred",
+        });
       }
     }
   );
@@ -277,24 +243,6 @@ export default async function userRoutes(fastify: FastifyInstance) {
             limit: { type: "number", default: 5 },
           },
         },
-        response: {
-          200: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                id: { type: "string" },
-                context_id: { type: "string" },
-                user_id: { type: "string" },
-                metadata: { type: "object" },
-                output_base_prompt: { type: "object" },
-                created_at: { type: "string" },
-                updated_at: { type: "string" },
-                similarity_score: { type: "number" },
-              },
-            },
-          },
-        },
       },
     },
     async (request, reply) => {
@@ -314,7 +262,10 @@ export default async function userRoutes(fastify: FastifyInstance) {
         reply.send(result);
       } catch (error) {
         fastify.log.error(error);
-        reply.code(500).send({ error: error.message });
+        reply.code(500).send({
+          error:
+            error instanceof Error ? error.message : "Unknown error occurred",
+        });
       }
     }
   );
@@ -332,24 +283,6 @@ export default async function userRoutes(fastify: FastifyInstance) {
             limit: { type: "number", default: 10 },
           },
           required: ["query"],
-        },
-        response: {
-          200: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                id: { type: "string" },
-                context_id: { type: "string" },
-                user_id: { type: "string" },
-                metadata: { type: "object" },
-                output_base_prompt: { type: "object" },
-                created_at: { type: "string" },
-                updated_at: { type: "string" },
-                similarity_score: { type: "number" },
-              },
-            },
-          },
         },
       },
     },
@@ -380,12 +313,15 @@ export default async function userRoutes(fastify: FastifyInstance) {
         reply.send(result);
       } catch (error) {
         fastify.log.error(error);
-        reply.code(500).send({ error: error.message });
+        reply.code(500).send({
+          error:
+            error instanceof Error ? error.message : "Unknown error occurred",
+        });
       }
     }
   );
 
-  // Get all user contexts (admin endpoint)
+  // Get all user contexts
   fastify.get(
     "/",
     {
@@ -395,23 +331,6 @@ export default async function userRoutes(fastify: FastifyInstance) {
           properties: {
             limit: { type: "number", default: 50 },
             offset: { type: "number", default: 0 },
-          },
-        },
-        response: {
-          200: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                id: { type: "string" },
-                context_id: { type: "string" },
-                user_id: { type: "string" },
-                metadata: { type: "object" },
-                output_base_prompt: { type: "object" },
-                created_at: { type: "string" },
-                updated_at: { type: "string" },
-              },
-            },
           },
         },
       },
@@ -431,7 +350,10 @@ export default async function userRoutes(fastify: FastifyInstance) {
         reply.send(result);
       } catch (error) {
         fastify.log.error(error);
-        reply.code(500).send({ error: error.message });
+        reply.code(500).send({
+          error:
+            error instanceof Error ? error.message : "Unknown error occurred",
+        });
       }
     }
   );

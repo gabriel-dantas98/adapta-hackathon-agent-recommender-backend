@@ -14,6 +14,7 @@ export class ChatHistoryRepository {
       const insertData: ChatHistoryInsert = {
         session_id: data.session_id,
         message: data.message,
+        user_id: data.user_id,
       };
 
       const { data: result, error } = await supabase

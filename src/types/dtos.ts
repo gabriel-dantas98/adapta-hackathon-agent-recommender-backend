@@ -66,10 +66,12 @@ export const SolutionProductResponseDto = z.object({
 export const ChatMessageDto = z.object({
   session_id: z.string(),
   message: z.record(z.any()),
+  user_id: z.string().optional(),
 });
 
 export const ChatHistoryResponseDto = z.object({
   id: z.number(),
+  user_id: z.string(),
   session_id: z.string(),
   message: z.record(z.any()),
 });
