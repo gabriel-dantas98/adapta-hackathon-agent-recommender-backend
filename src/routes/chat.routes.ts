@@ -29,6 +29,7 @@ export default async function chatRoutes(fastify: FastifyInstance) {
       const userContext = await userEnhancedContextRepository.findByUserId(
         user_id
       );
+
       console.log(
         `USER_ID: ${user_id} USER_CONTEXT: ${JSON.stringify(userContext)}`
       );
@@ -151,9 +152,8 @@ export default async function chatRoutes(fastify: FastifyInstance) {
   fastify.get("/threads/:userId", async (request, reply) => {
     try {
       const { userId } = request.params as { userId: string };
-      const { days_back = 30 } = request.query as { days_back?: number };
 
-      const result = await chatService.getUserThreads(userId, days_back);
+      const result = await chatService.getUserThreads(userId);
 
       reply.send(result);
     } catch (error) {
@@ -212,42 +212,21 @@ export default async function chatRoutes(fastify: FastifyInstance) {
   });
 
   // Clean up old messages
-  fastify.delete(
-    "/cleanup",
-    {
-      schema: {
-        querystring: {
-          type: "object",
-          properties: {
-            days_old: { type: "number", default: 90 },
-          },
-        },
-        response: {
-          200: {
-            type: "object",
-            properties: {
-              deleted_count: { type: "number" },
-            },
-          },
-        },
-      },
-    },
-    async (request, reply) => {
-      try {
-        const { days_old = 90 } = request.query as { days_old?: number };
+  fastify.delete("/cleanup", async (request, reply) => {
+    try {
+      const { days_old = 90 } = request.query as { days_old?: number };
 
-        const deletedCount = await chatService.cleanupOldMessages(days_old);
+      const deletedCount = await chatService.cleanupOldMessages(days_old);
 
-        reply.send({ deleted_count: deletedCount });
-      } catch (error) {
-        fastify.log.error(error);
-        reply.code(500).send({
-          error:
-            error instanceof Error ? error.message : "Unknown error occurred",
-        });
-      }
+      reply.send({ deleted_count: deletedCount });
+    } catch (error) {
+      fastify.log.error(error);
+      reply.code(500).send({
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      });
     }
-  );
+  });
 
   // Get recent messages from thread
   fastify.get(

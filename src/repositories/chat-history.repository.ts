@@ -151,6 +151,62 @@ export class ChatHistoryRepository {
     }
   }
 
+  async findSessionsByUserId(
+    userId: string
+  ): Promise<
+    { session_id: string; message_count: number; last_activity: string }[]
+  > {
+    try {
+      // Busca todas as mensagens do usuário
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .select("session_id, id")
+        .eq("user_id", userId)
+        .order("id", { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data || data.length === 0) {
+        return [];
+      }
+
+      // Agrupa por session_id, conta mensagens e pega última atividade
+      const sessionGroups: Record<string, { count: number; lastId: number }> =
+        {};
+
+      data.forEach((row: any) => {
+        const sessionId = row.session_id;
+        const messageId = row.id;
+
+        if (!sessionGroups[sessionId]) {
+          sessionGroups[sessionId] = {
+            count: 0,
+            lastId: messageId,
+          };
+        }
+        sessionGroups[sessionId].count += 1;
+
+        // Como ordenamos por id desc, o primeiro id de cada sessão é o mais recente
+        if (messageId > sessionGroups[sessionId].lastId) {
+          sessionGroups[sessionId].lastId = messageId;
+        }
+      });
+
+      return Object.entries(sessionGroups).map(
+        ([session_id, { count, lastId }]) => ({
+          session_id,
+          message_count: count,
+          last_activity: new Date(lastId).toISOString(),
+        })
+      );
+    } catch (error) {
+      handleDatabaseError(error, "find sessions by user id");
+      throw error;
+    }
+  }
+
   async deleteBySessionId(sessionId: string): Promise<boolean> {
     try {
       const { error } = await supabase

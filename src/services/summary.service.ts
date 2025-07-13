@@ -10,8 +10,8 @@ class SummaryService {
   constructor() {
     this.llm = new ChatOpenAI({
       openAIApiKey: env.OPENAI_API_KEY,
-      modelName: "gpt-3.5-turbo",
-      temperature: 0.3,
+      modelName: "o4-mini-2025-04-16",
+      temperature: 1,
     });
 
     this.outputParser = new StringOutputParser();

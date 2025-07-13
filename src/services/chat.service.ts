@@ -133,47 +133,43 @@ class ChatService {
       };
     } catch (error) {
       console.error("Error getting thread history:", error);
-      throw new Error(`Failed to get thread history: ${error.message}`);
+      throw new Error(
+        `Failed to get thread history: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   }
 
   /**
    * Busca threads de um usuário
    */
-  async getUserThreads(
-    userId: string,
-    daysBack: number = 30
-  ): Promise<
+  async getUserThreads(userId: string): Promise<
     Array<{
       session_id: string;
       message_count: number;
       last_activity: string;
       summary?: string;
+      messages: Array<{
+        id: number;
+        message: Record<string, any>;
+        timestamp: string;
+      }>;
     }>
   > {
     try {
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - daysBack);
+      const sessions = await chatHistoryRepository.findSessionsByUserId(userId);
 
-      const endDate = new Date();
-
-      const sessions = await chatHistoryRepository.findSessionsByDateRange(
-        startDate.toISOString(),
-        endDate.toISOString()
-      );
-
-      // Para cada sessão, buscar última atividade e gerar resumo
+      // Para cada sessão, buscar mensagens e gerar resumo
       const threadsWithDetails = await Promise.all(
         sessions.map(async (session) => {
-          const recentMessages =
-            await chatHistoryRepository.findRecentBySessionId(
-              session.session_id,
-              5
-            );
+          const allMessages = await chatHistoryRepository.findAllBySessionId(
+            session.session_id
+          );
 
           let summary: string | undefined;
-          if (recentMessages.length > 0) {
-            const chatMessages = recentMessages.map((msg) => ({
+          if (allMessages.length > 0) {
+            const chatMessages = allMessages.map((msg) => ({
               role: msg.message.role || "user",
               content: msg.message.content || JSON.stringify(msg.message),
             }));
@@ -184,9 +180,13 @@ class ChatService {
           return {
             session_id: session.session_id,
             message_count: session.message_count,
-            last_activity:
-              recentMessages[recentMessages.length - 1]?.id.toString() || "",
+            last_activity: session.last_activity,
             summary,
+            messages: allMessages.map((msg) => ({
+              id: msg.id,
+              message: msg.message,
+              timestamp: msg.id.toString(),
+            })),
           };
         })
       );
@@ -194,7 +194,11 @@ class ChatService {
       return threadsWithDetails;
     } catch (error) {
       console.error("Error getting user threads:", error);
-      throw new Error(`Failed to get user threads: ${error.message}`);
+      throw new Error(
+        `Failed to get user threads: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   }
 
@@ -253,7 +257,11 @@ class ChatService {
       );
     } catch (error) {
       console.error("Error searching messages:", error);
-      throw new Error(`Failed to search messages: ${error.message}`);
+      throw new Error(
+        `Failed to search messages: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   }
 
@@ -270,7 +278,7 @@ class ChatService {
     common_topics: Array<{ topic: string; frequency: number }>;
   }> {
     try {
-      const threads = await this.getUserThreads(userId, daysBack);
+      const threads = await this.getUserThreads(userId);
 
       const totalMessages = threads.reduce(
         (sum, thread) => sum + thread.message_count,
@@ -310,7 +318,9 @@ class ChatService {
     } catch (error) {
       console.error("Error analyzing conversation patterns:", error);
       throw new Error(
-        `Failed to analyze conversation patterns: ${error.message}`
+        `Failed to analyze conversation patterns: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
       );
     }
   }
@@ -430,7 +440,11 @@ RESPOSTA:`;
       return result ? 1 : 0;
     } catch (error) {
       console.error("Error cleaning up old messages:", error);
-      throw new Error(`Failed to cleanup old messages: ${error.message}`);
+      throw new Error(
+        `Failed to cleanup old messages: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   }
 }
