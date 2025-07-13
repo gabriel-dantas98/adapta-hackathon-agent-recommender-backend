@@ -23,7 +23,7 @@ class EmbeddingsService {
 
     this.llm = new ChatOpenAI({
       openAIApiKey: env.OPENAI_API_KEY,
-      modelName: "o4-mini-2025-04-16",
+      modelName: "gpt-4o-2024-08-06",
       temperature: 1,
     });
 

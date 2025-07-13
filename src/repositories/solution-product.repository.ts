@@ -6,6 +6,7 @@ import {
   SolutionProductResponse,
 } from "../types/dtos";
 import { embeddingsService } from "../services/embeddings.service";
+import { solutionOwnerRepository } from "./solution-owner.repository";
 
 type SolutionProductRow =
   Database["public"]["Tables"]["solutions_owner_products"]["Row"];
@@ -483,12 +484,19 @@ export class SolutionProductRepository {
         throw error;
       }
 
+      // append solutions_owner to the data
+      const products_with_metadata = data.map((row: any) => ({
+        solutions_owner: this.findById(row.owner_id ?? ""),
+        ...row,
+      }));
+
       console.log(
         `[${new Date().toISOString()}] [SolutionProductRepository.${methodName}] Found ${
           data.length
         } solution products with owner info`
       );
-      return data.map((row: any) => ({
+
+      return products_with_metadata.map((row: any) => ({
         ...this.formatResponse(row),
         similarity_score: row.similarity,
         owner_info: row.owner_info,
@@ -508,6 +516,7 @@ export class SolutionProductRepository {
       id: row.id,
       product_id: row.product_id,
       owner_id: row.owner_id,
+      solutions_owner: row.solutions_owner,
       title: row.title,
       description: row.description,
       image_url: row.image_url,

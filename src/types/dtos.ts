@@ -49,6 +49,7 @@ export const SolutionProductResponseDto = z.object({
   id: z.string(),
   product_id: z.string(),
   owner_id: z.string().nullable(),
+  solutions_owner: SolutionOwnerResponseDto,
   metadata: z.record(z.any()),
   title: z.string(),
   categories: z.array(z.string()),

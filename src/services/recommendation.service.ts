@@ -34,14 +34,7 @@ class RecommendationService {
       );
 
       console.log(
-        `[${new Date().toISOString()}] [RecommendationService.${methodName}] userEnhancedContext: ${JSON.stringify(
-          userEnhancedContext
-        )}`
-      );
-
-      console.log(
-        `[${new Date().toISOString()}] [RecommendationService.${methodName}] threadSummary: ${JSON.stringify(
-          threadSummary
+        `[${new Date().toISOString()}] [RecommendationService.${methodName}] threadSummary: ${threadSummary}
         )}`
       );
 
