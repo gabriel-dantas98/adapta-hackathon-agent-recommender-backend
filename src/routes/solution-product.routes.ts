@@ -11,7 +11,6 @@ export default async function solutionProductRoutes(fastify: FastifyInstance) {
     "/",
     {
       schema: {
-        body: CreateSolutionProductDto,
         response: {
           201: {
             type: "object",
@@ -222,7 +221,7 @@ export default async function solutionProductRoutes(fastify: FastifyInstance) {
           },
           required: ["id"],
         },
-        body: UpdateSolutionProductDto,
+
         response: {
           200: {
             type: "object",

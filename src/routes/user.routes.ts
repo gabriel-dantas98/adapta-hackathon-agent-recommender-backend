@@ -8,7 +8,6 @@ export default async function userRoutes(fastify: FastifyInstance) {
     "/onboarding",
     {
       schema: {
-        body: OnboardingDto,
         response: {
           201: {
             type: "object",
@@ -102,7 +101,7 @@ export default async function userRoutes(fastify: FastifyInstance) {
           },
           required: ["userId"],
         },
-        body: UpdateUserContextDto,
+
         response: {
           200: {
             type: "object",

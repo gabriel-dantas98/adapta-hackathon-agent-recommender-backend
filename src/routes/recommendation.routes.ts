@@ -8,7 +8,6 @@ export default async function recommendationRoutes(fastify: FastifyInstance) {
     "/",
     {
       schema: {
-        body: RecommendationRequestDto,
         response: {
           200: {
             type: "object",

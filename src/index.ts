@@ -3,6 +3,11 @@ import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import { env } from "./config/env";
+import {
+  ZodTypeProvider,
+  validatorCompiler,
+  serializerCompiler,
+} from "fastify-type-provider-zod";
 
 // Import routes
 import solutionOwnerRoutes from "./routes/solution-owner.routes";
@@ -15,7 +20,11 @@ const fastify = Fastify({
   logger: {
     level: env.LOG_LEVEL,
   },
-});
+}).withTypeProvider<ZodTypeProvider>();
+
+// Set validator and serializer compilers
+fastify.setValidatorCompiler(validatorCompiler);
+fastify.setSerializerCompiler(serializerCompiler);
 
 // Register plugins
 async function registerPlugins() {

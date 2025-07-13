@@ -1,5 +1,9 @@
 import { FastifyInstance } from "fastify";
-import { CreateSolutionOwnerDto, UpdateSolutionOwnerDto } from "../types/dtos";
+import {
+  CreateSolutionOwnerDto,
+  UpdateSolutionOwnerDto,
+  CreateSolutionOwnerInput,
+} from "../types/dtos";
 import { solutionOwnerRepository } from "../repositories/solution-owner.repository";
 
 export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
@@ -9,32 +13,17 @@ export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
     {
       schema: {
         body: CreateSolutionOwnerDto,
-        response: {
-          201: {
-            type: "object",
-            properties: {
-              id: { type: "string" },
-              company_id: { type: "string" },
-              company_name: { type: "string" },
-              domain: { type: "string", nullable: true },
-              metadata: { type: "object" },
-              output_base_prompt: { type: "object" },
-              created_at: { type: "string" },
-              updated_at: { type: "string" },
-            },
-          },
-        },
       },
     },
     async (request, reply) => {
       try {
-        const data = CreateSolutionOwnerDto.parse(request.body);
-        const result = await solutionOwnerRepository.create(data);
-
+        const result = await solutionOwnerRepository.create(
+          request.body as CreateSolutionOwnerInput
+        );
         reply.code(201).send(result);
       } catch (error) {
         fastify.log.error(error);
-        reply.code(400).send({ error: error.message });
+        reply.code(400).send({ error: (error as Error).message });
       }
     }
   );
@@ -194,59 +183,23 @@ export default async function solutionOwnerRoutes(fastify: FastifyInstance) {
   );
 
   // Update solution owner
-  fastify.put(
-    "/:id",
-    {
-      schema: {
-        params: {
-          type: "object",
-          properties: {
-            id: { type: "string" },
-          },
-          required: ["id"],
-        },
-        body: UpdateSolutionOwnerDto,
-        response: {
-          200: {
-            type: "object",
-            properties: {
-              id: { type: "string" },
-              company_id: { type: "string" },
-              company_name: { type: "string" },
-              domain: { type: "string", nullable: true },
-              metadata: { type: "object" },
-              output_base_prompt: { type: "object" },
-              created_at: { type: "string" },
-              updated_at: { type: "string" },
-            },
-          },
-          404: {
-            type: "object",
-            properties: {
-              error: { type: "string" },
-            },
-          },
-        },
-      },
-    },
-    async (request, reply) => {
-      try {
-        const { id } = request.params as { id: string };
-        const data = UpdateSolutionOwnerDto.parse(request.body);
-        const result = await solutionOwnerRepository.update(id, data);
+  fastify.put("/:id", async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const data = UpdateSolutionOwnerDto.parse(request.body);
+      const result = await solutionOwnerRepository.update(id, data);
 
-        if (!result) {
-          reply.code(404).send({ error: "Solution owner not found" });
-          return;
-        }
-
-        reply.send(result);
-      } catch (error) {
-        fastify.log.error(error);
-        reply.code(400).send({ error: error.message });
+      if (!result) {
+        reply.code(404).send({ error: "Solution owner not found" });
+        return;
       }
+
+      reply.send(result);
+    } catch (error) {
+      fastify.log.error(error);
+      reply.code(400).send({ error: error.message });
     }
-  );
+  });
 
   // Delete solution owner
   fastify.delete(
